@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import '@/styles/globals.css';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'CRUD de Pessoas',
-  description: 'Sistema de gerenciamento de pessoas com Next.js',
+  title: 'Gerenciamento de Pessoas',
+  description: 'CRUD de pessoas com Next.js e banco em memória',
 };
 
 export default function RootLayout({
@@ -14,22 +14,14 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <header className="header">
-          <div className="container">
-            <h1>CRUD de Pessoas</h1>
-            <nav>
-              <a href="/pessoas">Pessoas</a>
-            </nav>
+        <nav className="bg-gray-800 text-white py-4">
+          <div className="max-w-6xl mx-auto px-4">
+            <a href="/pessoas" className="text-xl font-bold hover:text-gray-300">
+              Gerenciamento de Pessoas
+            </a>
           </div>
-        </header>
-        <main className="main">
-          <div className="container">{children}</div>
-        </main>
-        <footer className="footer">
-          <div className="container">
-            <p>&copy; 2024 CRUD de Pessoas. Todos os direitos reservados.</p>
-          </div>
-        </footer>
+        </nav>
+        {children}
       </body>
     </html>
   );
