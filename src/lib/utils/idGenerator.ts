@@ -1,0 +1,1 @@
+export function generateId(): string {\n  return crypto.randomUUID();\n}\n"
