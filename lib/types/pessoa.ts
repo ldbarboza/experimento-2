@@ -1,19 +1,17 @@
 /**
- * Pessoa (Person) data model
+ * Pessoa (Person) entity types and interfaces
  */
+
 export interface Pessoa {
   id: string;
   nome: string;
   email: string;
   telefone?: string;
-  dataNascimento?: string; // ISO 8601 format (YYYY-MM-DD)
+  dataNascimento?: string; // ISO 8601 format: YYYY-MM-DD
   createdAt: string; // ISO 8601 timestamp
   updatedAt: string; // ISO 8601 timestamp
 }
 
-/**
- * DTO for creating a new pessoa
- */
 export interface CreatePessoaDTO {
   nome: string;
   email: string;
@@ -21,9 +19,6 @@ export interface CreatePessoaDTO {
   dataNascimento?: string;
 }
 
-/**
- * DTO for updating a pessoa (all fields optional)
- */
 export interface UpdatePessoaDTO {
   nome?: string;
   email?: string;
@@ -31,9 +26,6 @@ export interface UpdatePessoaDTO {
   dataNascimento?: string;
 }
 
-/**
- * Paginated response wrapper
- */
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -44,9 +36,6 @@ export interface PaginatedResponse<T> {
   };
 }
 
-/**
- * API Error response
- */
 export interface ErrorResponse {
   status: number;
   message: string;
@@ -54,10 +43,11 @@ export interface ErrorResponse {
   timestamp: string;
 }
 
-/**
- * Validation result
- */
 export interface ValidationResult {
   valid: boolean;
-  errors?: Record<string, string>;
+  error?: string;
+}
+
+export interface ValidationErrors {
+  [key: string]: string;
 }
