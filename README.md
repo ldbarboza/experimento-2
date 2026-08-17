@@ -1,1 +1,269 @@
-# CRUD de Pessoas com Next.js e Banco em Memória\n\nSistema completo de gerenciamento de pessoas (CRUD) desenvolvido com Next.js 14 e banco de dados em memória.\n\n## 🚀 Características\n\n- ✅ **CRUD Completo**: Criar, ler, atualizar e deletar pessoas\n- ✅ **API RESTful**: Endpoints bem definidos com tratamento de erros\n- ✅ **Banco em Memória**: Armazenamento rápido durante a execução\n- ✅ **Validação**: Validação robusta no cliente e servidor\n- ✅ **Paginação**: Suporte a paginação e busca\n- ✅ **Interface Responsiva**: UI moderna e mobile-friendly\n- ✅ **TypeScript**: Type-safe em toda a aplicação\n- ✅ **Testes**: Suite completa de testes unitários\n\n## 📋 Requisitos\n\n- Node.js 18+\n- npm ou yarn\n\n## 🔧 Instalação\n\n```bash\n# Clonar repositório\ngit clone https://github.com/ldbarboza/experimento-2.git\ncd experimento-2\n\n# Instalar dependências\nnpm install\n\n# Executar em desenvolvimento\nnpm run dev\n\n# Abrir no navegador\n# http://localhost:3000\n```\n\n## 📚 Estrutura do Projeto\n\n```\nprojeto/\n├── app/                          # Next.js App Router\n│   ├── api/pessoas/              # API endpoints\n│   │   ├── route.ts              # POST (criar), GET (listar)\n│   │   └── [id]/route.ts         # GET, PUT, DELETE\n│   ├── pessoas/                  # Páginas de pessoas\n│   │   ├── page.tsx              # Lista de pessoas\n│   │   ├── novo/page.tsx         # Criar pessoa\n│   │   └── [id]/                 # Detalhes e edição\n│   └── layout.tsx                # Layout raiz\n├── lib/\n│   ├── database/                 # Serviço de banco de dados\n│   ├── validation/               # Validações\n│   ├── types/                    # Tipos TypeScript\n│   ├── utils/                    # Utilitários\n│   └── api/                      # Helpers de API\n├── components/                   # Componentes React\n├── styles/                       # Estilos CSS\n├── __tests__/                    # Testes unitários\n└── package.json\n```\n\n## 🔌 API Endpoints\n\n### Criar Pessoa\n```http\nPOST /api/pessoas\nContent-Type: application/json\n\n{\n  \"nome\": \"João Silva\",\n  \"email\": \"joao@example.com\",\n  \"telefone\": \"11999999999\",\n  \"dataNascimento\": \"2000-01-01\"\n}\n```\n\n**Respostas:**\n- `201 Created`: Pessoa criada com sucesso\n- `400 Bad Request`: Validação falhou\n- `409 Conflict`: Email já existe\n\n### Listar Pessoas\n```http\nGET /api/pessoas?page=1&limit=10&search=João\n```\n\n**Parâmetros:**\n- `page` (opcional): Número da página (padrão: 1)\n- `limit` (opcional): Itens por página (padrão: 10, máx: 100)\n- `search` (opcional): Buscar por nome ou email\n\n**Resposta:**\n```json\n{\n  \"data\": [\n    {\n      \"id\": \"uuid\",\n      \"nome\": \"João Silva\",\n      \"email\": \"joao@example.com\",\n      \"telefone\": \"11999999999\",\n      \"dataNascimento\": \"2000-01-01\",\n      \"createdAt\": \"2024-01-15T10:30:00Z\",\n      \"updatedAt\": \"2024-01-15T10:30:00Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 1,\n    \"pages\": 1\n  }\n}\n```\n\n### Obter Pessoa\n```http\nGET /api/pessoas/:id\n```\n\n**Respostas:**\n- `200 OK`: Pessoa encontrada\n- `404 Not Found`: Pessoa não existe\n\n### Atualizar Pessoa\n```http\nPUT /api/pessoas/:id\nContent-Type: application/json\n\n{\n  \"nome\": \"João Santos\",\n  \"email\": \"joao.santos@example.com\"\n}\n```\n\n**Respostas:**\n- `200 OK`: Pessoa atualizada\n- `400 Bad Request`: Validação falhou\n- `404 Not Found`: Pessoa não existe\n- `409 Conflict`: Email já existe\n\n### Deletar Pessoa\n```http\nDELETE /api/pessoas/:id\n```\n\n**Respostas:**\n- `204 No Content`: Pessoa deletada\n- `404 Not Found`: Pessoa não existe\n\n## 🎨 Interface de Usuário\n\n### Páginas\n\n1. **Home** (`/`)\n   - Página inicial com boas-vindas\n   - Link para acessar a lista de pessoas\n\n2. **Lista de Pessoas** (`/pessoas`)\n   - Tabela com todas as pessoas\n   - Busca por nome ou email\n   - Paginação\n   - Ações: Ver, Editar, Deletar\n\n3. **Nova Pessoa** (`/pessoas/novo`)\n   - Formulário para criar nova pessoa\n   - Validação em tempo real\n   - Feedback de sucesso/erro\n\n4. **Detalhes da Pessoa** (`/pessoas/:id`)\n   - Exibição completa dos dados\n   - Opções para editar ou deletar\n   - Timestamps de criação e atualização\n\n5. **Editar Pessoa** (`/pessoas/:id/editar`)\n   - Formulário pré-preenchido\n   - Validação em tempo real\n   - Feedback de sucesso/erro\n\n## ✅ Validações\n\n### Nome\n- Obrigatório\n- Mínimo 3 caracteres\n- Máximo 255 caracteres\n\n### Email\n- Obrigatório\n- Formato válido\n- Único na base de dados\n- Case-insensitive\n\n### Telefone\n- Opcional\n- 10-15 dígitos\n- Aceita formatação (parênteses, hífens, espaços)\n\n### Data de Nascimento\n- Opcional\n- Formato ISO 8601 (YYYY-MM-DD)\n- Deve ser no passado\n\n## 🧪 Testes\n\n```bash\n# Executar testes\nnpm test\n\n# Executar testes em modo watch\nnpm run test:watch\n\n# Executar testes com cobertura\nnpm test -- --coverage\n```\n\n### Cobertura de Testes\n\n- **Validação**: Testes para todas as regras de validação\n- **Banco de Dados**: Testes CRUD completos\n- **Paginação**: Testes de paginação e busca\n- **Tratamento de Erros**: Testes de casos de erro\n\n## 🏗️ Arquitetura\n\n### Camadas\n\n1. **API Layer** (`app/api/`)\n   - Route handlers do Next.js\n   - Validação de requisições\n   - Tratamento de erros\n   - Respostas padronizadas\n\n2. **Data Layer** (`lib/database/`)\n   - Serviço de banco em memória\n   - Operações CRUD\n   - Índice de emails\n   - Paginação\n\n3. **Validation Layer** (`lib/validation/`)\n   - Regras de validação\n   - Reutilizável cliente/servidor\n   - Mensagens de erro localizadas\n\n4. **UI Layer** (`components/` e `app/`)\n   - Componentes React\n   - Páginas Next.js\n   - Estilos CSS Modules\n   - Responsividade\n\n### Padrões\n\n- **Singleton**: Banco de dados em memória\n- **DTO**: Data Transfer Objects para requisições\n- **Type Safety**: TypeScript em toda a aplicação\n- **Error Handling**: Tratamento consistente de erros\n- **Validation**: Validação em cliente e servidor\n\n## 🔒 Segurança\n\n- ✅ Validação no servidor (não confia apenas no cliente)\n- ✅ Normalização de emails (case-insensitive)\n- ✅ Tratamento de erros sem exposição de detalhes internos\n- ✅ Type safety com TypeScript\n- ✅ Sanitização de entrada\n\n## 📊 Performance\n\n- **Banco em Memória**: Acesso O(1) com Map\n- **Índice de Emails**: Busca rápida de duplicatas\n- **Paginação**: Apenas dados necessários retornados\n- **Busca**: Filtro eficiente com índice\n\n## 🚀 Build e Deploy\n\n```bash\n# Build para produção\nnpm run build\n\n# Iniciar servidor de produção\nnpm start\n```\n\n## ⚠️ Limitações\n\n- **Dados Voláteis**: Dados são perdidos ao reiniciar o servidor\n- **Single Instance**: Não funciona em múltiplas instâncias\n- **Sem Persistência**: Não há backup ou recuperação\n- **Limite de Memória**: Limitado pela RAM disponível\n\n## 🔄 Próximos Passos\n\nPara produção, considere:\n\n1. **Banco de Dados Real**: PostgreSQL, MongoDB, etc.\n2. **Autenticação**: JWT, OAuth, etc.\n3. **Autorização**: Controle de acesso baseado em papéis\n4. **Auditoria**: Log de alterações\n5. **Cache**: Redis para performance\n6. **Soft Delete**: Manter histórico de deletados\n7. **Backup**: Sistema de backup automático\n8. **Monitoring**: Logs e métricas\n\n## 📝 Licença\n\nMIT\n\n## 👤 Autor\n\nLucas Barboza\n\n## 🤝 Contribuindo\n\nContribuições são bem-vindas! Por favor, abra uma issue ou pull request.\n"
+# CRUD de Pessoas com Next.js e Banco em Memória
+
+Um sistema completo de CRUD (Create, Read, Update, Delete) para gerenciamento de pessoas, desenvolvido com Next.js 14 e banco de dados em memória.
+
+## 🚀 Características
+
+- ✅ **API RESTful completa** - Endpoints para criar, ler, atualizar e deletar pessoas
+- ✅ **Banco de dados em memória** - Armazenamento rápido durante a execução da aplicação
+- ✅ **Validação robusta** - Validação de dados no servidor e cliente
+- ✅ **Paginação** - Suporte a paginação com limite configurável
+- ✅ **Busca e filtro** - Buscar pessoas por nome ou email
+- ✅ **Interface responsiva** - Design mobile-first com CSS puro
+- ✅ **Testes abrangentes** - Suite de testes para database e validação
+- ✅ **TypeScript** - Type-safe em toda a aplicação
+
+## 📋 Requisitos
+
+- Node.js 18+
+- npm ou yarn
+
+## 🛠️ Instalação
+
+```bash
+# Clonar repositório
+git clone https://github.com/ldbarboza/experimento-2.git
+cd experimento-2
+
+# Instalar dependências
+npm install
+
+# Executar servidor de desenvolvimento
+npm run dev
+
+# Abrir no navegador
+# http://localhost:3000/pessoas
+```
+
+## 📚 Estrutura do Projeto
+
+```
+projeto/
+├── app/
+│   ├── api/
+│   │   └── pessoas/              # API routes
+│   │       ├── route.ts          # POST (criar), GET (listar)
+│   │       └── [id]/
+│   │           └── route.ts      # GET, PUT, DELETE
+│   ├── pessoas/                  # Páginas frontend
+│   │   ├── page.tsx              # Lista de pessoas
+│   │   ├── novo/
+│   │   │   └── page.tsx          # Criar nova pessoa
+│   │   └── [id]/
+│   │       ├── page.tsx          # Detalhes da pessoa
+│   │       └── editar/
+│   │           └── page.tsx      # Editar pessoa
+│   ├── layout.tsx                # Layout raiz
+│   └── globals.css               # Estilos globais
+├── lib/
+│   ├── database/
+│   │   └── pessoasDb.ts          # Serviço de banco de dados
+│   ├── validation/
+│   │   └── pessoasValidator.ts   # Validações
+│   └── types/
+│       └── pessoa.ts             # Tipos TypeScript
+├── components/
+│   ├── PessoaForm.tsx            # Formulário reutilizável
+│   └── PessoasList.tsx           # Lista com paginação
+├── __tests__/
+│   ├── database/
+│   │   └── pessoasDb.test.ts     # Testes do banco
+│   └── validation/
+│       └── pessoasValidator.test.ts  # Testes de validação
+└── package.json
+```
+
+## 🔌 API Endpoints
+
+### Criar Pessoa
+```bash
+POST /api/pessoas
+Content-Type: application/json
+
+{
+  "nome": "João Silva",
+  "email": "joao@example.com",
+  "telefone": "11999999999",
+  "dataNascimento": "1990-01-15"
+}
+
+# Response: 201 Created
+{
+  "id": "uuid",
+  "nome": "João Silva",
+  "email": "joao@example.com",
+  "telefone": "11999999999",
+  "dataNascimento": "1990-01-15",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+
+### Listar Pessoas
+```bash
+GET /api/pessoas?page=1&limit=10&search=João
+
+# Response: 200 OK
+{
+  "data": [
+    {
+      "id": "uuid",
+      "nome": "João Silva",
+      "email": "joao@example.com",
+      "telefone": "11999999999",
+      "dataNascimento": "1990-01-15",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "pages": 1
+  }
+}
+```
+
+### Obter Pessoa
+```bash
+GET /api/pessoas/:id
+
+# Response: 200 OK
+{
+  "id": "uuid",
+  "nome": "João Silva",
+  "email": "joao@example.com",
+  "telefone": "11999999999",
+  "dataNascimento": "1990-01-15",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+
+### Atualizar Pessoa
+```bash
+PUT /api/pessoas/:id
+Content-Type: application/json
+
+{
+  "nome": "João Silva Updated"
+}
+
+# Response: 200 OK
+{
+  "id": "uuid",
+  "nome": "João Silva Updated",
+  "email": "joao@example.com",
+  "telefone": "11999999999",
+  "dataNascimento": "1990-01-15",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:35:00Z"
+}
+```
+
+### Deletar Pessoa
+```bash
+DELETE /api/pessoas/:id
+
+# Response: 204 No Content
+```
+
+## ✅ Validações
+
+### Nome
+- Obrigatório
+- Mínimo 3 caracteres
+- Máximo 255 caracteres
+
+### Email
+- Obrigatório
+- Formato válido de email
+- Único (case-insensitive)
+
+### Telefone
+- Opcional
+- 10-15 dígitos (aceita formatação)
+
+### Data de Nascimento
+- Opcional
+- Formato: YYYY-MM-DD
+- Deve ser no passado
+
+## 🧪 Testes
+
+```bash
+# Executar testes
+npm test
+
+# Executar testes em modo watch
+npm test:watch
+
+# Executar testes com cobertura
+npm test -- --coverage
+```
+
+### Cobertura de Testes
+
+- **Database Service**: 100% - Todos os métodos CRUD testados
+- **Validation**: 100% - Todas as regras de validação testadas
+- **API Routes**: Testáveis via integração
+
+## 🎨 Interface
+
+### Página de Lista
+- Tabela com todas as pessoas
+- Busca por nome ou email
+- Paginação com controles
+- Ações: Ver, Editar, Deletar
+
+### Página de Criar
+- Formulário com validação em tempo real
+- Feedback de sucesso/erro
+- Redirecionamento automático
+
+### Página de Detalhes
+- Exibição completa dos dados
+- Opções de editar e deletar
+- Navegação de volta
+
+### Página de Editar
+- Formulário pré-preenchido
+- Validação parcial (campos opcionais)
+- Atualização em tempo real
+
+## 🔒 Segurança
+
+- ✅ Validação de entrada no servidor
+- ✅ Normalização de email (case-insensitive)
+- ✅ Prevenção de duplicatas
+- ✅ Tratamento de erros apropriado
+- ✅ Mensagens de erro informativas
+
+## 📊 Limitações Conhecidas
+
+- Dados são perdidos ao reiniciar o servidor
+- Não adequado para produção (use banco de dados real)
+- Sem autenticação/autorização
+- Sem audit trail
+- Sem soft delete
+
+## 🚀 Próximos Passos
+
+Para migrar para produção:
+
+1. Substituir `PessoasDatabase` por um banco de dados real (PostgreSQL, MongoDB, etc.)
+2. Adicionar autenticação e autorização
+3. Implementar soft delete com audit trail
+4. Adicionar rate limiting
+5. Implementar cache
+6. Adicionar logging estruturado
+7. Configurar CORS apropriadamente
+
+## 📝 Licença
+
+MIT
+
+## 👨‍💻 Autor
+
+Desenvolvido como parte do projeto experimento-2
