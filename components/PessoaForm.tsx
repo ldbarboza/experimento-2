@@ -1,22 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pessoa, CreatePessoaDTO, UpdatePessoaDTO } from '@/lib/types/pessoa';
-import { validateCreatePessoa, validateUpdatePessoa } from '@/lib/validation/pessoasValidator';
-import styles from '@/styles/form.module.css';
 
 interface PessoaFormProps {
-  onSubmit: (data: CreatePessoaDTO | UpdatePessoaDTO) => Promise<void>;
   initialData?: Pessoa;
+  onSubmit: (data: CreatePessoaDTO | UpdatePessoaDTO) => Promise<void>;
   isLoading?: boolean;
   error?: string;
 }
 
 export default function PessoaForm({
-  onSubmit,
   initialData,
+  onSubmit,
   isLoading = false,
-  error,
+  error: externalError,
 }: PessoaFormProps) {
   const [formData, setFormData] = useState({
     nome: initialData?.nome || '',
@@ -26,7 +24,8 @@ export default function PessoaForm({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -44,97 +43,139 @@ export default function PessoaForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
-
-    // Validate
-    const validation = initialData
-      ? validateUpdatePessoa(formData)
-      : validateCreatePessoa(formData);
-
-    if (!validation.valid) {
-      setErrors(validation.errors || {});
-      return;
-    }
-
+    setIsSubmitting(true);
     setErrors({});
+    setSuccessMessage('');
 
     try {
-      await onSubmit(formData);
+      // Filter out empty optional fields
+      const dataToSubmit = {
+        nome: formData.nome.trim(),
+        email: formData.email.trim(),
+        ...(formData.telefone && { telefone: formData.telefone.trim() }),
+        ...(formData.dataNascimento && { dataNascimento: formData.dataNascimento }),
+      };
+
+      await onSubmit(dataToSubmit);
+      setSuccessMessage(
+        initialData ? 'Pessoa atualizada com sucesso!' : 'Pessoa criada com sucesso!'
+      );
+
+      // Reset form if creating new person
+      if (!initialData) {
+        setFormData({
+          nome: '',
+          email: '',
+          telefone: '',
+          dataNascimento: '',
+        });
+      }
     } catch (err) {
-      console.error('Form submission error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao salvar pessoa';
+      setErrors({ submit: errorMessage });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
-      {error && <div className={styles.errorAlert}>{error}</div>}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {(externalError || errors.submit) && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {externalError || errors.submit}
+        </div>
+      )}
 
-      <div className={styles.formGroup}>
-        <label htmlFor="nome">Nome *</label>
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+          {successMessage}
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="nome" className="block text-sm font-medium text-gray-700">
+          Nome *
+        </label>
         <input
           type="text"
           id="nome"
           name="nome"
           value={formData.nome}
           onChange={handleChange}
+          className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+            errors.nome ? 'border-red-500' : 'border-gray-300'
+          }`}
           placeholder="Digite o nome completo"
           required
-          className={errors.nome ? styles.inputError : ''}
         />
-        {errors.nome && <span className={styles.errorText}>{errors.nome}</span>}
+        {errors.nome && <p className="mt-1 text-sm text-red-600">{errors.nome}</p>}
       </div>
 
-      <div className={styles.formGroup}>
-        <label htmlFor="email">Email *</label>
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          Email *
+        </label>
         <input
           type="email"
           id="email"
           name="email"
           value={formData.email}
           onChange={handleChange}
+          className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+            errors.email ? 'border-red-500' : 'border-gray-300'
+          }`}
           placeholder="Digite o email"
           required
-          className={errors.email ? styles.inputError : ''}
         />
-        {errors.email && <span className={styles.errorText}>{errors.email}</span>}
+        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
       </div>
 
-      <div className={styles.formGroup}>
-        <label htmlFor="telefone">Telefone</label>
+      <div>
+        <label htmlFor="telefone" className="block text-sm font-medium text-gray-700">
+          Telefone
+        </label>
         <input
           type="tel"
           id="telefone"
           name="telefone"
           value={formData.telefone}
           onChange={handleChange}
-          placeholder="Digite o telefone (opcional)"
-          className={errors.telefone ? styles.inputError : ''}
+          className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+            errors.telefone ? 'border-red-500' : 'border-gray-300'
+          }`}
+          placeholder="(11) 99999-9999"
         />
-        {errors.telefone && <span className={styles.errorText}>{errors.telefone}</span>}
+        {errors.telefone && <p className="mt-1 text-sm text-red-600">{errors.telefone}</p>}
       </div>
 
-      <div className={styles.formGroup}>
-        <label htmlFor="dataNascimento">Data de Nascimento</label>
+      <div>
+        <label htmlFor="dataNascimento" className="block text-sm font-medium text-gray-700">
+          Data de Nascimento
+        </label>
         <input
           type="date"
           id="dataNascimento"
           name="dataNascimento"
           value={formData.dataNascimento}
           onChange={handleChange}
-          className={errors.dataNascimento ? styles.inputError : ''}
+          className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+            errors.dataNascimento ? 'border-red-500' : 'border-gray-300'
+          }`}
         />
         {errors.dataNascimento && (
-          <span className={styles.errorText}>{errors.dataNascimento}</span>
+          <p className="mt-1 text-sm text-red-600">{errors.dataNascimento}</p>
         )}
       </div>
 
-      <div className={styles.formActions}>
-        <button type="submit" disabled={isLoading} className={styles.submitBtn}>
-          {isLoading ? 'Salvando...' : initialData ? 'Atualizar' : 'Criar'}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting || isLoading}
+        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+      >
+        {isSubmitting || isLoading ? 'Salvando...' : initialData ? 'Atualizar' : 'Criar'}
+      </button>
     </form>
   );
 }
