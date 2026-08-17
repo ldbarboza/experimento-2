@@ -1,1 +1,23 @@
-'use client';\n\nimport { useState } from 'react';\nimport { useRouter } from 'next/navigation';\nimport PessoaForm from '@/components/PessoaForm';\nimport { CreatePessoaDTO } from '@/lib/types/pessoa';\n\nexport default function NovaPessoaPage() {\n  const router = useRouter();\n  const [isLoading, setIsLoading] = useState(false);\n  const [error, setError] = useState<string | null>(null);\n\n  const handleSubmit = async (data: CreatePessoaDTO) => {\n    setIsLoading(true);\n    setError(null);\n\n    try {\n      const response = await fetch('/api/pessoas', {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n        },\n        body: JSON.stringify(data),\n      });\n\n      if (!response.ok) {\n        const errorData = await response.json();\n        if (errorData.details) {\n          throw { details: errorData.details };\n        }\n        throw new Error(errorData.message || 'Erro ao criar pessoa');\n      }\n\n      router.push('/pessoas');\n    } catch (err: any) {\n      if (err.details) {\n        throw err;\n      }\n      setError(err instanceof Error ? err.message : 'Erro desconhecido');\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  return (\n    <div className=\"max-w-2xl mx-auto\">\n      <h1 className=\"text-3xl font-bold mb-6\">Nova Pessoa</h1>\n      <PessoaForm onSubmit={handleSubmit} isLoading={isLoading} error={error} />\n    </div>\n  );\n}\n"
+import Link from 'next/link';
+import PessoaForm from '@/components/PessoaForm';
+
+export const metadata = {
+  title: 'Nova Pessoa - CRUD',
+  description: 'Criar nova pessoa',
+};
+
+export default function NovaPessoaPage() {
+  return (
+    <main className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-2xl mx-auto px-4">
+        <div className="mb-8">
+          <Link href="/pessoas" className="text-blue-600 hover:text-blue-800">
+            ← Voltar para lista
+          </Link>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Criar Nova Pessoa</h1>
+        <PessoaForm />
+      </div>
+    </main>
+  );
+}
