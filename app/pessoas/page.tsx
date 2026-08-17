@@ -1,17 +1,22 @@
 import PessoasList from '@/components/PessoasList';
 
-export const metadata = {
-  title: 'Pessoas - CRUD',
-  description: 'Gerenciar pessoas',
-};
+async function deletePessoa(id: string) {
+  'use server';
+
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/pessoas/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao deletar pessoa');
+    }
+  } catch (error) {
+    console.error('Error deleting pessoa:', error);
+    throw error;
+  }
+}
 
 export default function PessoasPage() {
-  return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Gerenciar Pessoas</h1>
-        <PessoasList />
-      </div>
-    </main>
-  );
+  return <PessoasList onDelete={deletePessoa} />;
 }

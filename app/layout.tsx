@@ -1,1 +1,36 @@
-import type { Metadata } from 'next';\nimport './globals.css';\n\nexport const metadata: Metadata = {\n  title: 'CRUD de Pessoas',\n  description: 'Sistema de gerenciamento de pessoas com Next.js',\n};\n\nexport default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode;\n}) {\n  return (\n    <html lang=\"pt-BR\">\n      <body>\n        <div className=\"min-h-screen bg-gray-50\">\n          <nav className=\"bg-blue-600 text-white p-4\">\n            <div className=\"max-w-6xl mx-auto\">\n              <a href=\"/\" className=\"text-2xl font-bold\">\n                CRUD Pessoas\n              </a>\n            </div>\n          </nav>\n          <main className=\"max-w-6xl mx-auto p-4\">\n            {children}\n          </main>\n        </div>\n      </body>\n    </html>\n  );\n}\n"
+import type { Metadata } from 'next';
+import '@/styles/globals.css';
+
+export const metadata: Metadata = {
+  title: 'CRUD de Pessoas',
+  description: 'Sistema de gerenciamento de pessoas com Next.js',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="pt-BR">
+      <body>
+        <header className="header">
+          <div className="container">
+            <h1>CRUD de Pessoas</h1>
+            <nav>
+              <a href="/pessoas">Pessoas</a>
+            </nav>
+          </div>
+        </header>
+        <main className="main">
+          <div className="container">{children}</div>
+        </main>
+        <footer className="footer">
+          <div className="container">
+            <p>&copy; 2024 CRUD de Pessoas. Todos os direitos reservados.</p>
+          </div>
+        </footer>
+      </body>
+    </html>
+  );
+}
