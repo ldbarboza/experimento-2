@@ -1,20 +1,21 @@
+import { Pessoa, CreatePessoaDTO, UpdatePessoaDTO, PaginatedResponse } from '@/lib/types/pessoa';
+import { generateUUID } from '@/lib/utils/uuid';
+import { getCurrentTimestamp } from '@/lib/utils/date';
+import { normalizeEmail } from '@/lib/utils/normalization';
+
 /**
- * In-memory database service for Pessoa entity
+ * In-memory database service for Pessoas
  * Singleton pattern ensures single instance across all requests
  */
-
-import { Pessoa, CreatePessoaDTO, UpdatePessoaDTO, PaginatedResponse } from '@/lib/types/pessoa';
-import { normalizeEmail, normalizeTelefone } from '@/lib/validation/pessoasValidator';
-
 class PessoasDatabase {
   private static instance: PessoasDatabase;
   private pessoas: Map<string, Pessoa> = new Map();
-  private emailIndex: Map<string, string> = new Map(); // email -> id mapping for quick lookup
+  private emailIndex: Map<string, string> = new Map(); // normalized email -> id
 
   private constructor() {}
 
   /**
-   * Gets the singleton instance of the database
+   * Get singleton instance
    */
   static getInstance(): PessoasDatabase {
     if (!PessoasDatabase.instance) {
@@ -24,44 +25,25 @@ class PessoasDatabase {
   }
 
   /**
-   * Generates a UUID v4
+   * Create a new pessoa
    */
-  private generateId(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
-
-  /**
-   * Gets current ISO timestamp
-   */
-  private getCurrentTimestamp(): string {
-    return new Date().toISOString();
-  }
-
-  /**
-   * Creates a new person
-   * @throws Error if email already exists
-   */
-  create(dto: CreatePessoaDTO): Pessoa {
-    const normalizedEmail = normalizeEmail(dto.email);
+  create(data: CreatePessoaDTO): Pessoa {
+    const normalizedEmail = normalizeEmail(data.email);
 
     // Check for duplicate email
     if (this.emailIndex.has(normalizedEmail)) {
-      throw new Error(`Email ${dto.email} já está registrado`);
+      throw new Error(`Email já existe: ${data.email}`);
     }
 
-    const id = this.generateId();
-    const now = this.getCurrentTimestamp();
+    const id = generateUUID();
+    const now = getCurrentTimestamp();
 
     const pessoa: Pessoa = {
       id,
-      nome: dto.nome.trim(),
+      nome: data.nome.trim(),
       email: normalizedEmail,
-      telefone: dto.telefone ? normalizeTelefone(dto.telefone) : undefined,
-      dataNascimento: dto.dataNascimento,
+      telefone: data.telefone?.trim(),
+      dataNascimento: data.dataNascimento,
       createdAt: now,
       updatedAt: now,
     };
@@ -73,37 +55,42 @@ class PessoasDatabase {
   }
 
   /**
-   * Reads a single person by ID
+   * Read a single pessoa by ID
    */
   read(id: string): Pessoa | null {
     return this.pessoas.get(id) || null;
   }
 
   /**
-   * Reads all people with pagination and optional search
+   * Read all pessoas with pagination and optional search
    */
-  readAll(page: number = 1, limit: number = 10, search?: string): PaginatedResponse<Pessoa> {
-    let allPessoas = Array.from(this.pessoas.values());
+  readAll(
+    page: number = 1,
+    limit: number = 10,
+    search?: string
+  ): PaginatedResponse<Pessoa> {
+    let filtered = Array.from(this.pessoas.values());
 
-    // Apply search filter if provided
+    // Apply search filter
     if (search && search.trim()) {
       const searchLower = search.toLowerCase();
-      allPessoas = allPessoas.filter(
+      filtered = filtered.filter(
         (p) =>
           p.nome.toLowerCase().includes(searchLower) ||
           p.email.toLowerCase().includes(searchLower)
       );
     }
 
-    // Sort by createdAt descending (newest first)
-    allPessoas.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Sort by creation date (newest first)
+    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    const total = allPessoas.length;
+    // Calculate pagination
+    const total = filtered.length;
     const pages = Math.ceil(total / limit);
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
+    const start = (page - 1) * limit;
+    const end = start + limit;
 
-    const data = allPessoas.slice(startIndex, endIndex);
+    const data = filtered.slice(start, end);
 
     return {
       data,
@@ -117,76 +104,88 @@ class PessoasDatabase {
   }
 
   /**
-   * Updates a person
-   * @throws Error if person not found or email already exists
+   * Update a pessoa
    */
-  update(id: string, dto: UpdatePessoaDTO): Pessoa {
+  update(id: string, data: UpdatePessoaDTO): Pessoa {
     const pessoa = this.pessoas.get(id);
     if (!pessoa) {
-      throw new Error(`Pessoa com ID ${id} não encontrada`);
+      throw new Error(`Pessoa não encontrada: ${id}`);
     }
 
     // Check for email conflict if email is being updated
-    if (dto.email) {
-      const normalizedNewEmail = normalizeEmail(dto.email);
+    if (data.email) {
+      const normalizedNewEmail = normalizeEmail(data.email);
       const existingId = this.emailIndex.get(normalizedNewEmail);
 
       if (existingId && existingId !== id) {
-        throw new Error(`Email ${dto.email} já está registrado`);
+        throw new Error(`Email já existe: ${data.email}`);
       }
 
       // Remove old email from index
       this.emailIndex.delete(normalizeEmail(pessoa.email));
       // Add new email to index
       this.emailIndex.set(normalizedNewEmail, id);
+      pessoa.email = normalizedNewEmail;
     }
 
     // Update fields
-    const updated: Pessoa = {
-      ...pessoa,
-      nome: dto.nome !== undefined ? dto.nome.trim() : pessoa.nome,
-      email: dto.email !== undefined ? normalizeEmail(dto.email) : pessoa.email,
-      telefone: dto.telefone !== undefined ? normalizeTelefone(dto.telefone) : pessoa.telefone,
-      dataNascimento: dto.dataNascimento !== undefined ? dto.dataNascimento : pessoa.dataNascimento,
-      updatedAt: this.getCurrentTimestamp(),
-    };
+    if (data.nome !== undefined) {
+      pessoa.nome = data.nome.trim();
+    }
+    if (data.telefone !== undefined) {
+      pessoa.telefone = data.telefone.trim();
+    }
+    if (data.dataNascimento !== undefined) {
+      pessoa.dataNascimento = data.dataNascimento;
+    }
 
-    this.pessoas.set(id, updated);
-    return updated;
+    pessoa.updatedAt = getCurrentTimestamp();
+
+    return pessoa;
   }
 
   /**
-   * Deletes a person
-   * @throws Error if person not found
+   * Delete a pessoa
    */
-  delete(id: string): void {
+  delete(id: string): boolean {
     const pessoa = this.pessoas.get(id);
     if (!pessoa) {
-      throw new Error(`Pessoa com ID ${id} não encontrada`);
+      return false;
     }
 
     this.pessoas.delete(id);
     this.emailIndex.delete(normalizeEmail(pessoa.email));
+
+    return true;
   }
 
   /**
-   * Checks if an email exists (case-insensitive)
+   * Check if email exists (for validation)
    */
   emailExists(email: string, excludeId?: string): boolean {
     const normalizedEmail = normalizeEmail(email);
-    const id = this.emailIndex.get(normalizedEmail);
-    return id !== undefined && id !== excludeId;
+    const existingId = this.emailIndex.get(normalizedEmail);
+
+    if (!existingId) {
+      return false;
+    }
+
+    if (excludeId && existingId === excludeId) {
+      return false;
+    }
+
+    return true;
   }
 
   /**
-   * Gets total count of people
+   * Get total count of pessoas
    */
   count(): number {
     return this.pessoas.size;
   }
 
   /**
-   * Clears all data (useful for testing)
+   * Clear all data (for testing)
    */
   clear(): void {
     this.pessoas.clear();
@@ -194,4 +193,5 @@ class PessoasDatabase {
   }
 }
 
+// Export singleton instance
 export const pessoasDb = PessoasDatabase.getInstance();
