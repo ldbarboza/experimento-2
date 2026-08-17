@@ -1,0 +1,1 @@
+export interface Pessoa {\n  id: string;\n  nome: string;\n  email: string;\n}\n
