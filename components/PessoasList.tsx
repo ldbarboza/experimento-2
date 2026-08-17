@@ -1,1 +1,259 @@
-'use client';\n\nimport { useState, useEffect } from 'react';\nimport Link from 'next/link';\nimport { Pessoa, PaginatedResponse } from '@/lib/types/pessoa';\nimport { formatDateBR, formatTimestampBR } from '@/lib/utils/date';\nimport { formatPhoneBR } from '@/lib/utils/phone';\n\ninterface PessoasListProps {\n  onDelete: (id: string) => Promise<void>;\n}\n\nexport default function PessoasList({ onDelete }: PessoasListProps) {\n  const [pessoas, setPessoas] = useState<Pessoa[]>([]);\n  const [pagination, setPagination] = useState({\n    page: 1,\n    limit: 10,\n    total: 0,\n    pages: 0,\n  });\n  const [search, setSearch] = useState('');\n  const [isLoading, setIsLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);\n  const [isDeleting, setIsDeleting] = useState(false);\n\n  const fetchPessoas = async (page: number = 1, searchQuery: string = '') => {\n    setIsLoading(true);\n    setError(null);\n\n    try {\n      const params = new URLSearchParams({\n        page: page.toString(),\n        limit: '10',\n      });\n\n      if (searchQuery) {\n        params.append('search', searchQuery);\n      }\n\n      const response = await fetch(`/api/pessoas?${params}`);\n      if (!response.ok) {\n        throw new Error('Erro ao carregar pessoas');\n      }\n\n      const data: PaginatedResponse<Pessoa> = await response.json();\n      setPessoas(data.data);\n      setPagination(data.pagination);\n    } catch (err) {\n      setError(err instanceof Error ? err.message : 'Erro desconhecido');\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  useEffect(() => {\n    fetchPessoas(1, search);\n  }, []);\n\n  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {\n    const value = e.target.value;\n    setSearch(value);\n    fetchPessoas(1, value);\n  };\n\n  const handlePageChange = (newPage: number) => {\n    fetchPessoas(newPage, search);\n  };\n\n  const handleDelete = async (id: string) => {\n    setIsDeleting(true);\n    try {\n      await onDelete(id);\n      setDeleteConfirm(null);\n      await fetchPessoas(pagination.page, search);\n    } finally {\n      setIsDeleting(false);\n    }\n  };\n\n  return (\n    <div className=\"space-y-4\">\n      {/* Header */}\n      <div className=\"flex justify-between items-center\">\n        <h1 className=\"text-3xl font-bold\">Pessoas</h1>\n        <Link\n          href=\"/pessoas/novo\"\n          className=\"px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700\"\n        >\n          + Nova Pessoa\n        </Link>\n      </div>\n\n      {/* Search */}\n      <div>\n        <input\n          type=\"text\"\n          placeholder=\"Buscar por nome ou email...\"\n          value={search}\n          onChange={handleSearch}\n          className=\"w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500\"\n        />\n      </div>\n\n      {/* Error Message */}\n      {error && (\n        <div className=\"p-4 bg-red-100 border border-red-400 text-red-700 rounded\">\n          {error}\n        </div>\n      )}\n\n      {/* Loading State */}\n      {isLoading ? (\n        <div className=\"text-center py-8 text-gray-500\">Carregando...</div>\n      ) : pessoas.length === 0 ? (\n        <div className=\"text-center py-8 text-gray-500\">\n          Nenhuma pessoa encontrada\n        </div>\n      ) : (\n        <>\n          {/* Table */}\n          <div className=\"overflow-x-auto\">\n            <table className=\"w-full border-collapse border border-gray-300\">\n              <thead className=\"bg-gray-100\">\n                <tr>\n                  <th className=\"border border-gray-300 px-4 py-2 text-left\">Nome</th>\n                  <th className=\"border border-gray-300 px-4 py-2 text-left\">Email</th>\n                  <th className=\"border border-gray-300 px-4 py-2 text-left\">Telefone</th>\n                  <th className=\"border border-gray-300 px-4 py-2 text-left\">Data Nascimento</th>\n                  <th className=\"border border-gray-300 px-4 py-2 text-center\">A\u00e7\u00f5es</th>\n                </tr>\n              </thead>\n              <tbody>\n                {pessoas.map((pessoa) => (\n                  <tr key={pessoa.id} className=\"hover:bg-gray-50\">\n                    <td className=\"border border-gray-300 px-4 py-2\">{pessoa.nome}</td>\n                    <td className=\"border border-gray-300 px-4 py-2\">{pessoa.email}</td>\n                    <td className=\"border border-gray-300 px-4 py-2\">\n                      {pessoa.telefone ? formatPhoneBR(pessoa.telefone) : '-'}\n                    </td>\n                    <td className=\"border border-gray-300 px-4 py-2\">\n                      {pessoa.dataNascimento ? formatDateBR(pessoa.dataNascimento) : '-'}\n                    </td>\n                    <td className=\"border border-gray-300 px-4 py-2 text-center space-x-2\">\n                      <Link\n                        href={`/pessoas/${pessoa.id}`}\n                        className=\"text-blue-600 hover:text-blue-800 underline\"\n                      >\n                        Ver\n                      </Link>\n                      <Link\n                        href={`/pessoas/${pessoa.id}/editar`}\n                        className=\"text-yellow-600 hover:text-yellow-800 underline\"\n                      >\n                        Editar\n                      </Link>\n                      <button\n                        onClick={() => setDeleteConfirm(pessoa.id)}\n                        className=\"text-red-600 hover:text-red-800 underline\"\n                      >\n                        Deletar\n                      </button>\n                    </td>\n                  </tr>\n                ))}\n              </tbody>\n            </table>\n          </div>\n\n          {/* Pagination */}\n          <div className=\"flex justify-between items-center\">\n            <div className=\"text-sm text-gray-600\">\n              Mostrando {pessoas.length} de {pagination.total} pessoas\n            </div>\n            <div className=\"space-x-2\">\n              <button\n                onClick={() => handlePageChange(pagination.page - 1)}\n                disabled={pagination.page === 1}\n                className=\"px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100 disabled:bg-gray-100 disabled:cursor-not-allowed\"\n              >\n                Anterior\n              </button>\n              <span className=\"px-3 py-1\">\n                P\u00e1gina {pagination.page} de {pagination.pages}\n              </span>\n              <button\n                onClick={() => handlePageChange(pagination.page + 1)}\n                disabled={pagination.page === pagination.pages}\n                className=\"px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100 disabled:bg-gray-100 disabled:cursor-not-allowed\"\n              >\n                Pr\u00f3xima\n              </button>\n            </div>\n          </div>\n        </>\n      )}\n\n      {/* Delete Confirmation Modal */}\n      {deleteConfirm && (\n        <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center\">\n          <div className=\"bg-white p-6 rounded-lg shadow-lg\">\n            <h2 className=\"text-lg font-bold mb-4\">Confirmar Dele\u00e7\u00e3o</h2>\n            <p className=\"mb-6\">Tem certeza que deseja deletar esta pessoa?</p>\n            <div className=\"flex gap-2\">\n              <button\n                onClick={() => handleDelete(deleteConfirm)}\n                disabled={isDeleting}\n                className=\"px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400\"\n              >\n                {isDeleting ? 'Deletando...' : 'Deletar'}\n              </button>\n              <button\n                onClick={() => setDeleteConfirm(null)}\n                disabled={isDeleting}\n                className=\"px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 disabled:bg-gray-200\"\n              >\n                Cancelar\n              </button>\n            </div>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n}\n"
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Pessoa, PaginatedResponse } from '@/lib/types/pessoa';
+import ConfirmDialog from './ConfirmDialog';
+
+interface PessoasListProps {
+  initialPage?: number;
+  initialSearch?: string;
+}
+
+export default function PessoasList({ initialPage = 1, initialSearch = '' }: PessoasListProps) {
+  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(initialPage);
+  const [search, setSearch] = useState(initialSearch);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1,
+  });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; nome: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchPessoas = async (pageNum: number, searchQuery: string) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const params = new URLSearchParams();
+      params.append('page', pageNum.toString());
+      params.append('limit', '10');
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+
+      const response = await fetch(`/api/pessoas?${params.toString()}`);
+      const data: PaginatedResponse<Pessoa> = await response.json();
+
+      if (!response.ok) {
+        setError('Erro ao carregar pessoas');
+        return;
+      }
+
+      setPessoas(data.data);
+      setPagination(data.pagination);
+    } catch (err) {
+      setError('Erro ao carregar pessoas. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPessoas(page, search);
+  }, [page, search]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setPage(1); // Reset to first page on search
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/pessoas/${deleteConfirm.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        setError('Erro ao deletar pessoa');
+        setDeleting(false);
+        return;
+      }
+
+      setDeleteConfirm(null);
+      fetchPessoas(page, search);
+    } catch (err) {
+      setError('Erro ao deletar pessoa. Tente novamente.');
+      setDeleting(false);
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const formatPhone = (phone?: string) => {
+    if (!phone) return '-';
+    // Format as (XX) XXXXX-XXXX if it has 11 digits
+    if (phone.length === 11) {
+      return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
+    }
+    return phone;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Search Bar */}
+      <div className="flex gap-4">
+        <input
+          type="text"
+          placeholder="Buscar por nome ou email..."
+          value={search}
+          onChange={handleSearch}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        />
+        <Link
+          href="/pessoas/novo"
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+        >
+          + Nova Pessoa
+        </Link>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-8">
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && pessoas.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-600">
+            {search ? 'Nenhuma pessoa encontrada' : 'Nenhuma pessoa cadastrada'}
+          </p>
+        </div>
+      )}
+
+      {/* Table */}
+      {!loading && pessoas.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100 border-b border-gray-300">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Telefone
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  Data de Nascimento
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {pessoas.map((pessoa) => (
+                <tr key={pessoa.id} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm text-gray-900">{pessoa.nome}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{pessoa.email}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatPhone(pessoa.telefone)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {formatDate(pessoa.dataNascimento)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex gap-2 justify-center">
+                      <Link
+                        href={`/pessoas/${pessoa.id}`}
+                        className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                      >
+                        Ver
+                      </Link>
+                      <Link
+                        href={`/pessoas/${pessoa.id}/editar`}
+                        className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                      >
+                        Editar
+                      </Link>
+                      <button
+                        onClick={() => setDeleteConfirm({ id: pessoa.id, nome: pessoa.nome })}
+                        className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                      >
+                        Deletar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && pagination.pages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Mostrando {(page - 1) * pagination.limit + 1} a{' '}
+            {Math.min(page * pagination.limit, pagination.total)} de {pagination.total} pessoas
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <div className="flex items-center gap-2">
+              {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`px-3 py-2 rounded-md ${
+                    p === page
+                      ? 'bg-blue-600 text-white'
+                      : 'border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setPage(Math.min(pagination.pages, page + 1))}
+              disabled={page === pagination.pages}
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              Próxima
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Confirmar Exclusão"
+          message={`Tem certeza que deseja deletar ${deleteConfirm.nome}? Esta ação não pode ser desfeita.`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirm(null)}
+          isLoading={deleting}
+          confirmText="Deletar"
+          cancelText="Cancelar"
+          isDangerous
+        />
+      )}
+    </div>
+  );
+}
