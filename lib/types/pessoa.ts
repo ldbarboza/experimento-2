@@ -1,3 +1,7 @@
+/**
+ * Pessoa (Person) entity types and interfaces
+ */
+
 export interface Pessoa {
   id: string;
   nome: string;
