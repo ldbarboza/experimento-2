@@ -1,1 +1,402 @@
-import PessoasDatabase from '@/lib/database/pessoasDb';\nimport { CreatePessoaDTO } from '@/lib/types/pessoa';\n\ndescribe('PessoasDatabase', () => {\n  let db: PessoasDatabase;\n\n  beforeEach(() => {\n    db = PessoasDatabase.getInstance();\n    db.clear();\n  });\n\n  describe('create', () => {\n    it('should create a new pessoa', () => {\n      const data: CreatePessoaDTO = {\n        nome: 'João Silva',\n        email: 'joao@example.com',\n      };\n\n      const result = db.create(data);\n\n      expect('code' in result).toBe(false);\n      expect(result.id).toBeDefined();\n      expect(result.nome).toBe('João Silva');\n      expect(result.email).toBe('joao@example.com');\n      expect(result.createdAt).toBeDefined();\n      expect(result.updatedAt).toBeDefined();\n    });\n\n    it('should normalize email to lowercase', () => {\n      const data: CreatePessoaDTO = {\n        nome: 'João Silva',\n        email: 'JOAO@EXAMPLE.COM',\n      };\n\n      const result = db.create(data);\n\n      expect('code' in result).toBe(false);\n      expect(result.email).toBe('joao@example.com');\n    });\n\n    it('should reject duplicate email', () => {\n      const data: CreatePessoaDTO = {\n        nome: 'João Silva',\n        email: 'joao@example.com',\n      };\n\n      db.create(data);\n      const result = db.create(data);\n\n      expect('code' in result).toBe(true);\n      expect(result.code).toBe('DUPLICATE_EMAIL');\n    });\n\n    it('should reject duplicate email case-insensitively', () => {\n      const data1: CreatePessoaDTO = {\n        nome: 'João Silva',\n        email: 'joao@example.com',\n      };\n\n      const data2: CreatePessoaDTO = {\n        nome: 'João Silva 2',\n        email: 'JOAO@EXAMPLE.COM',\n      };\n\n      db.create(data1);\n      const result = db.create(data2);\n\n      expect('code' in result).toBe(true);\n      expect(result.code).toBe('DUPLICATE_EMAIL');\n    });\n\n    it('should include optional fields', () => {\n      const data: CreatePessoaDTO = {\n        nome: 'João Silva',\n        email: 'joao@example.com',\n        telefone: '(11) 98765-4321',\n        dataNascimento: '1990-01-01',\n      };\n\n      const result = db.create(data);\n\n      expect('code' in result).toBe(false);\n      expect(result.telefone).toBe('(11) 98765-4321');\n      expect(result.dataNascimento).toBe('1990-01-01');\n    });\n  });\n\n  describe('read', () => {\n    it('should read an existing pessoa', () => {\n      const data: CreatePessoaDTO = {\n        nome: 'João Silva',\n        email: 'joao@example.com',\n      };\n\n      const created = db.create(data);\n      expect('code' in created).toBe(false);\n\n      const read = db.read(created.id);\n\n      expect(read).not.toBeNull();\n      expect(read?.id).toBe(created.id);\n      expect(read?.nome).toBe('João Silva');\n    });\n\n    it('should return null for non-existent pessoa', () => {\n      const result = db.read('non-existent-id');\n      expect(result).toBeNull();\n    });\n  });\n\n  describe('readAll', () => {\n    beforeEach(() => {\n      db.create({ nome: 'João Silva', email: 'joao@example.com' });\n      db.create({ nome: 'Maria Santos', email: 'maria@example.com' });\n      db.create({ nome: 'Pedro Oliveira', email: 'pedro@example.com' });\n    });\n\n    it('should return all pessoas with pagination', () => {\n      const result = db.readAll(1, 10);\n\n      expect(result.data.length).toBe(3);\n      expect(result.pagination.total).toBe(3);\n      expect(result.pagination.pages).toBe(1);\n      expect(result.pagination.page).toBe(1);\n    });\n\n    it('should paginate correctly', () => {\n      const page1 = db.readAll(1, 2);\n      const page2 = db.readAll(2, 2);\n\n      expect(page1.data.length).toBe(2);\n      expect(page2.data.length).toBe(1);\n      expect(page1.pagination.pages).toBe(2);\n    });\n\n    it('should search by name', () => {\n      const result = db.readAll(1, 10, 'João');\n\n      expect(result.data.length).toBe(1);\n      expect(result.data[0].nome).toBe('João Silva');\n    });\n\n    it('should search by email', () => {\n      const result = db.readAll(1, 10, 'maria@example.com');\n\n      expect(result.data.length).toBe(1);\n      expect(result.data[0].email).toBe('maria@example.com');\n    });\n\n    it('should search case-insensitively', () => {\n      const result = db.readAll(1, 10, 'JOÃO');\n\n      expect(result.data.length).toBe(1);\n      expect(result.data[0].nome).toBe('João Silva');\n    });\n\n    it('should return empty array when no matches', () => {\n      const result = db.readAll(1, 10, 'nonexistent');\n\n      expect(result.data.length).toBe(0);\n      expect(result.pagination.total).toBe(0);\n    });\n  });\n\n  describe('update', () => {\n    let pessoaId: string;\n\n    beforeEach(() => {\n      const created = db.create({\n        nome: 'João Silva',\n        email: 'joao@example.com',\n      });\n      expect('code' in created).toBe(false);\n      pessoaId = created.id;\n    });\n\n    it('should update pessoa fields', () => {\n      const result = db.update(pessoaId, {\n        nome: 'João Silva Updated',\n      });\n\n      expect('code' in result).toBe(false);\n      expect(result?.nome).toBe('João Silva Updated');\n      expect(result?.email).toBe('joao@example.com');\n    });\n\n    it('should update email', () => {\n      const result = db.update(pessoaId, {\n        email: 'newemail@example.com',\n      });\n\n      expect('code' in result).toBe(false);\n      expect(result?.email).toBe('newemail@example.com');\n    });\n\n    it('should reject duplicate email on update', () => {\n      db.create({ nome: 'Maria Santos', email: 'maria@example.com' });\n\n      const result = db.update(pessoaId, {\n        email: 'maria@example.com',\n      });\n\n      expect('code' in result).toBe(true);\n      expect(result.code).toBe('DUPLICATE_EMAIL');\n    });\n\n    it('should return null for non-existent pessoa', () => {\n      const result = db.update('non-existent-id', {\n        nome: 'New Name',\n      });\n\n      expect(result).toBeNull();\n    });\n\n    it('should update updatedAt timestamp', () => {\n      const created = db.read(pessoaId);\n      expect(created).not.toBeNull();\n\n      const originalUpdatedAt = created!.updatedAt;\n\n      // Wait a bit to ensure timestamp difference\n      const result = db.update(pessoaId, {\n        nome: 'Updated Name',\n      });\n\n      expect('code' in result).toBe(false);\n      expect(result?.updatedAt).not.toBe(originalUpdatedAt);\n    });\n  });\n\n  describe('delete', () => {\n    let pessoaId: string;\n\n    beforeEach(() => {\n      const created = db.create({\n        nome: 'João Silva',\n        email: 'joao@example.com',\n      });\n      expect('code' in created).toBe(false);\n      pessoaId = created.id;\n    });\n\n    it('should delete a pessoa', () => {\n      const result = db.delete(pessoaId);\n\n      expect(result).toBe(true);\n      expect(db.read(pessoaId)).toBeNull();\n    });\n\n    it('should return false for non-existent pessoa', () => {\n      const result = db.delete('non-existent-id');\n\n      expect(result).toBe(false);\n    });\n\n    it('should remove email from index', () => {\n      db.delete(pessoaId);\n\n      const result = db.create({\n        nome: 'João Silva',\n        email: 'joao@example.com',\n      });\n\n      expect('code' in result).toBe(false);\n    });\n  });\n\n  describe('emailExists', () => {\n    beforeEach(() => {\n      db.create({ nome: 'João Silva', email: 'joao@example.com' });\n    });\n\n    it('should return true for existing email', () => {\n      const result = db.emailExists('joao@example.com');\n      expect(result).toBe(true);\n    });\n\n    it('should return true for existing email case-insensitively', () => {\n      const result = db.emailExists('JOAO@EXAMPLE.COM');\n      expect(result).toBe(true);\n    });\n\n    it('should return false for non-existent email', () => {\n      const result = db.emailExists('nonexistent@example.com');\n      expect(result).toBe(false);\n    });\n  });\n\n  describe('count', () => {\n    it('should return 0 for empty database', () => {\n      expect(db.count()).toBe(0);\n    });\n\n    it('should return correct count', () => {\n      db.create({ nome: 'João Silva', email: 'joao@example.com' });\n      db.create({ nome: 'Maria Santos', email: 'maria@example.com' });\n\n      expect(db.count()).toBe(2);\n    });\n  });\n\n  describe('clear', () => {\n    it('should clear all data', () => {\n      db.create({ nome: 'João Silva', email: 'joao@example.com' });\n      db.create({ nome: 'Maria Santos', email: 'maria@example.com' });\n\n      db.clear();\n\n      expect(db.count()).toBe(0);\n    });\n  });\n});\n"
+/**
+ * Tests for PessoasDatabase service
+ */
+
+import { PessoasDatabase } from '@/lib/database/pessoasDb';
+import { CreatePessoaDTO } from '@/lib/types/pessoa';
+
+describe('PessoasDatabase', () => {
+  let db: PessoasDatabase;
+
+  beforeEach(() => {
+    // Get fresh instance for each test
+    db = PessoasDatabase.getInstance();
+    db.clear();
+  });
+
+  describe('Singleton Pattern', () => {
+    it('should return the same instance', () => {
+      const instance1 = PessoasDatabase.getInstance();
+      const instance2 = PessoasDatabase.getInstance();
+      expect(instance1).toBe(instance2);
+    });
+  });
+
+  describe('Create', () => {
+    it('should create a new person', () => {
+      const data: CreatePessoaDTO = {
+        nome: 'João Silva',
+        email: 'joao@example.com',
+        telefone: '11999999999',
+        dataNascimento: '1990-01-15',
+      };
+
+      const pessoa = db.create(data);
+
+      expect(pessoa.id).toBeDefined();
+      expect(pessoa.nome).toBe('João Silva');
+      expect(pessoa.email).toBe('joao@example.com');
+      expect(pessoa.telefone).toBe('11999999999');
+      expect(pessoa.dataNascimento).toBe('1990-01-15');
+      expect(pessoa.createdAt).toBeDefined();
+      expect(pessoa.updatedAt).toBeDefined();
+    });
+
+    it('should normalize email to lowercase', () => {
+      const data: CreatePessoaDTO = {
+        nome: 'João Silva',
+        email: 'JOAO@EXAMPLE.COM',
+      };
+
+      const pessoa = db.create(data);
+
+      expect(pessoa.email).toBe('joao@example.com');
+    });
+
+    it('should throw error for duplicate email', () => {
+      const data: CreatePessoaDTO = {
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      };
+
+      db.create(data);
+
+      expect(() => {
+        db.create(data);
+      }).toThrow('já está registrado');
+    });
+
+    it('should throw error for duplicate email (case-insensitive)', () => {
+      const data1: CreatePessoaDTO = {
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      };
+
+      const data2: CreatePessoaDTO = {
+        nome: 'João Silva 2',
+        email: 'JOAO@EXAMPLE.COM',
+      };
+
+      db.create(data1);
+
+      expect(() => {
+        db.create(data2);
+      }).toThrow('já está registrado');
+    });
+
+    it('should create person without optional fields', () => {
+      const data: CreatePessoaDTO = {
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      };
+
+      const pessoa = db.create(data);
+
+      expect(pessoa.telefone).toBeUndefined();
+      expect(pessoa.dataNascimento).toBeUndefined();
+    });
+  });
+
+  describe('Read', () => {
+    it('should read a person by ID', () => {
+      const data: CreatePessoaDTO = {
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      };
+
+      const created = db.create(data);
+      const read = db.read(created.id);
+
+      expect(read).toEqual(created);
+    });
+
+    it('should return null for non-existent ID', () => {
+      const read = db.read('non-existent-id');
+      expect(read).toBeNull();
+    });
+  });
+
+  describe('ReadAll', () => {
+    it('should return all people', () => {
+      const data1: CreatePessoaDTO = {
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      };
+
+      const data2: CreatePessoaDTO = {
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      };
+
+      db.create(data1);
+      db.create(data2);
+
+      const result = db.readAll();
+
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination.total).toBe(2);
+    });
+
+    it('should support pagination', () => {
+      // Create 25 people
+      for (let i = 0; i < 25; i++) {
+        db.create({
+          nome: `Pessoa ${i}`,
+          email: `pessoa${i}@example.com`,
+        });
+      }
+
+      const page1 = db.readAll(1, 10);
+      const page2 = db.readAll(2, 10);
+      const page3 = db.readAll(3, 10);
+
+      expect(page1.data).toHaveLength(10);
+      expect(page2.data).toHaveLength(10);
+      expect(page3.data).toHaveLength(5);
+      expect(page1.pagination.pages).toBe(3);
+      expect(page1.pagination.total).toBe(25);
+    });
+
+    it('should support search by name', () => {
+      db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.create({
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      });
+
+      const result = db.readAll(1, 10, 'João');
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].nome).toBe('João Silva');
+    });
+
+    it('should support search by email', () => {
+      db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.create({
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      });
+
+      const result = db.readAll(1, 10, 'maria');
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].email).toBe('maria@example.com');
+    });
+
+    it('should return empty array when search has no results', () => {
+      db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      const result = db.readAll(1, 10, 'nonexistent');
+
+      expect(result.data).toHaveLength(0);
+      expect(result.pagination.total).toBe(0);
+    });
+  });
+
+  describe('Update', () => {
+    it('should update a person', () => {
+      const created = db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      const updated = db.update(created.id, {
+        nome: 'João Silva Updated',
+      });
+
+      expect(updated.nome).toBe('João Silva Updated');
+      expect(updated.email).toBe('joao@example.com');
+      expect(updated.updatedAt).not.toBe(created.updatedAt);
+    });
+
+    it('should support partial update', () => {
+      const created = db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+        telefone: '11999999999',
+      });
+
+      const updated = db.update(created.id, {
+        telefone: '11888888888',
+      });
+
+      expect(updated.nome).toBe('João Silva');
+      expect(updated.email).toBe('joao@example.com');
+      expect(updated.telefone).toBe('11888888888');
+    });
+
+    it('should throw error for non-existent ID', () => {
+      expect(() => {
+        db.update('non-existent-id', { nome: 'New Name' });
+      }).toThrow('não encontrada');
+    });
+
+    it('should throw error when updating to duplicate email', () => {
+      const pessoa1 = db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.create({
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      });
+
+      expect(() => {
+        db.update(pessoa1.id, {
+          email: 'maria@example.com',
+        });
+      }).toThrow('já está registrado');
+    });
+
+    it('should allow updating email to same email', () => {
+      const pessoa = db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      const updated = db.update(pessoa.id, {
+        email: 'joao@example.com',
+      });
+
+      expect(updated.email).toBe('joao@example.com');
+    });
+
+    it('should normalize email when updating', () => {
+      const pessoa = db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      const updated = db.update(pessoa.id, {
+        email: 'NEWEMAIL@EXAMPLE.COM',
+      });
+
+      expect(updated.email).toBe('newemail@example.com');
+    });
+  });
+
+  describe('Delete', () => {
+    it('should delete a person', () => {
+      const created = db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.delete(created.id);
+
+      const read = db.read(created.id);
+      expect(read).toBeNull();
+    });
+
+    it('should throw error for non-existent ID', () => {
+      expect(() => {
+        db.delete('non-existent-id');
+      }).toThrow('não encontrada');
+    });
+
+    it('should remove email from index when deleting', () => {
+      const created = db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.delete(created.id);
+
+      // Should be able to create new person with same email
+      const newPessoa = db.create({
+        nome: 'João Silva 2',
+        email: 'joao@example.com',
+      });
+
+      expect(newPessoa.email).toBe('joao@example.com');
+    });
+  });
+
+  describe('Search', () => {
+    it('should search by name', () => {
+      db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.create({
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      });
+
+      const results = db.search('João');
+
+      expect(results).toHaveLength(1);
+      expect(results[0].nome).toBe('João Silva');
+    });
+
+    it('should search by email', () => {
+      db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.create({
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      });
+
+      const results = db.search('maria');
+
+      expect(results).toHaveLength(1);
+      expect(results[0].email).toBe('maria@example.com');
+    });
+  });
+
+  describe('Count', () => {
+    it('should return correct count', () => {
+      expect(db.count()).toBe(0);
+
+      db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      expect(db.count()).toBe(1);
+
+      db.create({
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      });
+
+      expect(db.count()).toBe(2);
+    });
+  });
+
+  describe('Clear', () => {
+    it('should clear all data', () => {
+      db.create({
+        nome: 'João Silva',
+        email: 'joao@example.com',
+      });
+
+      db.create({
+        nome: 'Maria Santos',
+        email: 'maria@example.com',
+      });
+
+      expect(db.count()).toBe(2);
+
+      db.clear();
+
+      expect(db.count()).toBe(0);
+    });
+  });
+});
