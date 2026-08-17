@@ -1,1 +1,1 @@
-export { db, default as PessoasDatabase } from './pessoasDb';
+export { db, PessoasDatabase } from './pessoasDb';

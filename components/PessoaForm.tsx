@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pessoa, CreatePessoaDTO, UpdatePessoaDTO } from '@/lib/types/pessoa';
+import { Pessoa, CreatePessoaDTO } from '@/lib/types/pessoa';
 
 interface PessoaFormProps {
   initialData?: Pessoa;
-  onSubmit: (data: CreatePessoaDTO | UpdatePessoaDTO) => Promise<void>;
+  // The form always produces a complete payload (nome/email required), so a
+  // handler that accepts UpdatePessoaDTO is also valid here.
+  onSubmit: (data: CreatePessoaDTO) => Promise<void>;
   isLoading?: boolean;
   error?: string;
 }
