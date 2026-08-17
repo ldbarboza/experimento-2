@@ -1,0 +1,1 @@
+const EMAIL_REGEX = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n\nexport const pessoaValidators = {\n  validateEmail: (email: string): boolean => {\n    return EMAIL_REGEX.test(email);\n  },\n\n  validateNome: (nome: string): boolean => {\n    return nome && nome.trim().length > 0 && nome.length <= 255;\n  },\n};\n
