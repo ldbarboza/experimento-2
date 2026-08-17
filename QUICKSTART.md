@@ -1,6 +1,6 @@
 # Quick Start Guide - CRUD de Pessoas
 
-## 🚀 5-Minute Setup
+## 🚀 Get Started in 5 Minutes
 
 ### 1. Install Dependencies
 ```bash
@@ -13,171 +13,296 @@ npm run dev
 ```
 
 ### 3. Open in Browser
-Navigate to: `http://localhost:3000`
+```
+http://localhost:3000/pessoas
+```
 
-You'll be automatically redirected to the people management page.
+That's it! You now have a fully functional CRUD system.
 
-## 📱 Using the Application
+---
 
-### Create a New Person
-1. Click the **"+ Nova Pessoa"** button
+## 📝 Basic Usage
+
+### Create a Person
+1. Click "Nova Pessoa" button
 2. Fill in the form:
-   - **Nome** (required): Full name (min 3 chars)
+   - **Nome** (required): Full name, 3+ characters
    - **Email** (required): Valid email address
    - **Telefone** (optional): Phone number
-   - **Data de Nascimento** (optional): Date of birth
-3. Click **"Criar"** button
+   - **Data de Nascimento** (optional): Birth date
+3. Click "Criar"
 4. You'll be redirected to the list
 
-### View All People
-- The main page (`/pessoas`) shows all people in a table
-- Use the **search bar** to filter by name or email
-- Navigate pages using the pagination controls
-
 ### View Person Details
-1. Click the **"Ver"** button on any person
-2. View all their information
-3. Click **"Editar"** to modify or **"Deletar"** to remove
+1. Click "Ver" button next to a person in the list
+2. See all their information
+3. Click "Editar" or "Deletar" if needed
 
 ### Edit a Person
-1. Click the **"Editar"** button on any person
+1. Click "Editar" button next to a person
 2. Modify the fields you want to change
-3. Click **"Atualizar"** to save
-4. You'll be redirected to the detail page
+3. Click "Atualizar"
+4. Changes are saved immediately
 
 ### Delete a Person
-1. Click the **"Deletar"** button
-2. Confirm the deletion in the dialog
-3. The person will be removed from the list
+1. Click "Deletar" button
+2. Confirm the deletion
+3. Person is removed from the list
 
-## 🧪 Running Tests
+### Search for People
+1. Use the search box at the top
+2. Type a name or email
+3. Results update automatically
+
+### Navigate Pages
+1. Use the pagination controls at the bottom
+2. Click page numbers to jump to a specific page
+3. Use "Anterior" and "Próxima" buttons to navigate
+
+---
+
+## 🧪 Run Tests
 
 ```bash
-# Run all tests once
+# Run all tests
 npm test
 
 # Run tests in watch mode
-npm run test:watch
+npm test:watch
+
+# Run tests with coverage
+npm test -- --coverage
 ```
 
-## 🔨 Build for Production
-
-```bash
-npm run build
-npm start
-```
+---
 
 ## 📚 API Examples
 
-### Create a Person
+### Using cURL
+
+**Create Person:**
 ```bash
 curl -X POST http://localhost:3000/api/pessoas \
   -H "Content-Type: application/json" \
   -d '{
     "nome": "João Silva",
     "email": "joao@example.com",
-    "telefone": "11999999999",
+    "telefone": "(11) 99999-9999",
     "dataNascimento": "1990-01-15"
   }'
 ```
 
-### List People
+**List People:**
 ```bash
-curl http://localhost:3000/api/pessoas?page=1&limit=10&search=João
+curl "http://localhost:3000/api/pessoas?page=1&limit=10"
 ```
 
-### Get a Person
+**Search:**
 ```bash
-curl http://localhost:3000/api/pessoas/{id}
+curl "http://localhost:3000/api/pessoas?search=João"
 ```
 
-### Update a Person
+**Get Person:**
 ```bash
-curl -X PUT http://localhost:3000/api/pessoas/{id} \
+curl "http://localhost:3000/api/pessoas/550e8400-e29b-41d4-a716-446655440000"
+```
+
+**Update Person:**
+```bash
+curl -X PUT http://localhost:3000/api/pessoas/550e8400-e29b-41d4-a716-446655440000 \
   -H "Content-Type: application/json" \
-  -d '{
-    "nome": "João Silva Updated"
-  }'
+  -d '{"nome": "João Updated"}'
 ```
 
-### Delete a Person
+**Delete Person:**
 ```bash
-curl -X DELETE http://localhost:3000/api/pessoas/{id}
+curl -X DELETE http://localhost:3000/api/pessoas/550e8400-e29b-41d4-a716-446655440000
 ```
 
-## ✅ Validation Rules
+### Using JavaScript
 
-| Field | Rules |
-|-------|-------|
-| **Nome** | Required, 3-255 characters |
-| **Email** | Required, valid format, unique |
-| **Telefone** | Optional, 10-15 digits |
-| **Data de Nascimento** | Optional, YYYY-MM-DD format, past date |
+```javascript
+// Create
+const response = await fetch('/api/pessoas', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    nome: 'João Silva',
+    email: 'joao@example.com'
+  })
+});
+const pessoa = await response.json();
 
-## 🎨 UI Features
+// List
+const list = await fetch('/api/pessoas').then(r => r.json());
 
-- ✅ Responsive design (works on mobile, tablet, desktop)
-- ✅ Real-time form validation
-- ✅ Search and filter
-- ✅ Pagination
-- ✅ Delete confirmation dialog
-- ✅ Success/error notifications
-- ✅ Loading states
+// Get
+const detail = await fetch(`/api/pessoas/${pessoa.id}`).then(r => r.json());
 
-## 📂 Project Structure
+// Update
+const updated = await fetch(`/api/pessoas/${pessoa.id}`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ nome: 'Updated' })
+}).then(r => r.json());
 
+// Delete
+await fetch(`/api/pessoas/${pessoa.id}`, { method: 'DELETE' });
 ```
-projeto/
-├── app/
-│   ├── api/pessoas/          # API endpoints
-│   ├── pessoas/              # Pages
-│   └── layout.tsx            # Layout
-├── lib/
-│   ├── database/             # Database service
-│   ├── validation/           # Validation rules
-│   └── types/                # TypeScript types
-├── components/               # React components
-└── package.json
+
+---
+
+## 🎯 Common Tasks
+
+### Add Sample Data
+
+Create a file `scripts/seed.js`:
+```javascript
+const { db } = require('./lib/database/pessoasDb');
+
+const sampleData = [
+  {
+    nome: 'João Silva',
+    email: 'joao@example.com',
+    telefone: '11999999999',
+    dataNascimento: '1990-01-15'
+  },
+  {
+    nome: 'Maria Santos',
+    email: 'maria@example.com',
+    telefone: '11888888888',
+    dataNascimento: '1992-05-20'
+  }
+];
+
+sampleData.forEach(data => db.create(data));
+console.log('Sample data added!');
 ```
+
+Then run:
+```bash
+node scripts/seed.js
+```
+
+### Export Data
+
+```javascript
+const { db } = require('./lib/database/pessoasDb');
+
+const allPeople = db.getAll();
+console.log(JSON.stringify(allPeople, null, 2));
+```
+
+### Clear All Data
+
+```javascript
+const { db } = require('./lib/database/pessoasDb');
+db.clear();
+console.log('All data cleared!');
+```
+
+---
 
 ## 🔍 Troubleshooting
 
-### Port 3000 Already in Use
+### Port Already in Use
 ```bash
+# Use a different port
 npm run dev -- -p 3001
 ```
 
-### Clear Node Modules
+### Tests Failing
 ```bash
-rm -rf node_modules
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
 npm install
+npm test
 ```
 
-### Reset Database
-Just restart the server - all data is in memory and will be cleared.
+### Data Not Persisting
+This is expected! Data is stored in memory and lost when the server restarts. This is by design for development/demo purposes.
 
-## 📖 More Information
+### Email Already Exists Error
+Each email must be unique. Try using a different email address.
 
-- See `CRUD_README.md` for detailed documentation
-- See `IMPLEMENTATION_SUMMARY.md` for technical details
-- Check `lib/types/pessoa.ts` for data structure
-- Review `lib/validation/pessoasValidator.ts` for validation rules
+### Invalid Date Error
+Use ISO 8601 format: YYYY-MM-DD (e.g., 1990-01-15)
 
-## 💡 Tips
+---
 
-1. **Email must be unique** - You can't create two people with the same email
-2. **Phone formatting** - Enter phone numbers with or without formatting, they'll be normalized
-3. **Date format** - Use YYYY-MM-DD format for dates (e.g., 1990-01-15)
-4. **Search is case-insensitive** - Search for "joão" or "JOÃO" works the same
-5. **Pagination** - Default is 10 items per page, adjustable via API
+## 📖 Documentation
 
-## 🎯 Next Steps
+- **README.md** - Project overview and features
+- **API.md** - Complete API documentation
+- **IMPLEMENTATION.md** - Architecture and design decisions
+- **CHANGES.md** - Summary of all changes
 
-1. Create some test people
-2. Try searching and filtering
-3. Edit and delete people
-4. Run the tests to see how it works
-5. Check the API endpoints with curl or Postman
-6. Review the code to understand the implementation
+---
 
-Enjoy! 🎉
+## 🛠️ Development
+
+### Project Structure
+```
+projeto/
+├── app/                    # Next.js app directory
+│   ├── api/pessoas/       # API routes
+│   ├── pessoas/           # Frontend pages
+│   └── layout.tsx         # Root layout
+├── lib/                    # Shared utilities
+│   ├── database/          # Database service
+│   ├── validation/        # Validation logic
+│   └── types/             # TypeScript types
+├── components/            # React components
+├── __tests__/             # Test files
+└── package.json
+```
+
+### Key Files
+- **Database:** `lib/database/pessoasDb.ts`
+- **Validation:** `lib/validation/pessoasValidator.ts`
+- **API:** `app/api/pessoas/route.ts` and `[id]/route.ts`
+- **Components:** `components/PessoaForm.tsx`, `components/PessoasList.tsx`
+
+### Adding Features
+
+1. **New Field:** Update `Pessoa` type, add validation, update form
+2. **New Endpoint:** Add route handler in `app/api/pessoas/`
+3. **New Page:** Create file in `app/pessoas/`
+4. **New Component:** Create file in `components/`
+
+---
+
+## 🚀 Next Steps
+
+1. **Explore the Code** - Read through the implementation
+2. **Run Tests** - Verify everything works: `npm test`
+3. **Try the API** - Use cURL or Postman to test endpoints
+4. **Customize** - Modify styles, add fields, extend functionality
+5. **Deploy** - Build and deploy to production
+
+---
+
+## 📞 Need Help?
+
+- Check the **README.md** for detailed information
+- Review **API.md** for endpoint documentation
+- Look at **IMPLEMENTATION.md** for architecture details
+- Check test files for usage examples
+
+---
+
+## ✅ Checklist
+
+- [ ] Dependencies installed (`npm install`)
+- [ ] Server running (`npm run dev`)
+- [ ] Can access http://localhost:3000/pessoas
+- [ ] Can create a person
+- [ ] Can view person details
+- [ ] Can edit a person
+- [ ] Can delete a person
+- [ ] Can search for people
+- [ ] Tests pass (`npm test`)
+
+---
+
+**You're all set! Happy coding! 🎉**
