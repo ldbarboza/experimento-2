@@ -1,154 +1,218 @@
+/**
+ * Validation utilities for Pessoa entity
+ */
+
 import { CreatePessoaDTO, UpdatePessoaDTO, ValidationError } from '@/lib/types/pessoa';
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^[\d\s\-()]+$/;
-const MIN_NOME_LENGTH = 3;
-const MAX_NOME_LENGTH = 255;
-const MIN_PHONE_LENGTH = 10;
-const MAX_PHONE_LENGTH = 15;
+const NOME_MIN_LENGTH = 3;
+const NOME_MAX_LENGTH = 255;
+const PHONE_MIN_DIGITS = 10;
+const PHONE_MAX_DIGITS = 15;
 
-export const validateNome = (nome: string): ValidationError | null => {
+/**
+ * Validates a person's name
+ */
+export const validateNome = (nome: string): { valid: boolean; error?: string } => {
   if (!nome || typeof nome !== 'string') {
-    return { field: 'nome', message: 'Nome é obrigatório' };
+    return { valid: false, error: 'Nome é obrigatório' };
   }
 
   const trimmed = nome.trim();
-  if (trimmed.length < MIN_NOME_LENGTH) {
+
+  if (trimmed.length < NOME_MIN_LENGTH) {
     return {
-      field: 'nome',
-      message: `Nome deve ter no mínimo ${MIN_NOME_LENGTH} caracteres`,
+      valid: false,
+      error: `Nome deve ter no mínimo ${NOME_MIN_LENGTH} caracteres`,
     };
   }
 
-  if (trimmed.length > MAX_NOME_LENGTH) {
+  if (trimmed.length > NOME_MAX_LENGTH) {
     return {
-      field: 'nome',
-      message: `Nome deve ter no máximo ${MAX_NOME_LENGTH} caracteres`,
+      valid: false,
+      error: `Nome deve ter no máximo ${NOME_MAX_LENGTH} caracteres`,
     };
   }
 
-  return null;
+  return { valid: true };
 };
 
-export const validateEmail = (email: string): ValidationError | null => {
+/**
+ * Validates an email address
+ */
+export const validateEmail = (email: string): { valid: boolean; error?: string } => {
   if (!email || typeof email !== 'string') {
-    return { field: 'email', message: 'Email é obrigatório' };
+    return { valid: false, error: 'Email é obrigatório' };
   }
 
-  const trimmed = email.trim();
-  if (!EMAIL_REGEX.test(trimmed)) {
-    return { field: 'email', message: 'Email inválido' };
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(email.trim())) {
+    return { valid: false, error: 'Email inválido' };
   }
 
-  return null;
+  return { valid: true };
 };
 
-export const validateTelefone = (telefone?: string): ValidationError | null => {
+/**
+ * Validates a phone number (flexible format)
+ */
+export const validateTelefone = (telefone?: string): { valid: boolean; error?: string } => {
   if (!telefone) {
-    return null; // Optional field
+    return { valid: true }; // Optional field
   }
 
   if (typeof telefone !== 'string') {
-    return { field: 'telefone', message: 'Telefone deve ser uma string' };
+    return { valid: false, error: 'Telefone deve ser uma string' };
   }
 
-  const trimmed = telefone.trim();
-  const digitsOnly = trimmed.replace(/\D/g, '');
+  // Extract only digits
+  const digitsOnly = telefone.replace(/\D/g, '');
 
-  if (digitsOnly.length < MIN_PHONE_LENGTH || digitsOnly.length > MAX_PHONE_LENGTH) {
+  if (digitsOnly.length < PHONE_MIN_DIGITS || digitsOnly.length > PHONE_MAX_DIGITS) {
     return {
-      field: 'telefone',
-      message: `Telefone deve ter entre ${MIN_PHONE_LENGTH} e ${MAX_PHONE_LENGTH} dígitos`,
+      valid: false,
+      error: `Telefone deve ter entre ${PHONE_MIN_DIGITS} e ${PHONE_MAX_DIGITS} dígitos`,
     };
   }
 
-  if (!PHONE_REGEX.test(trimmed)) {
-    return {
-      field: 'telefone',
-      message: 'Telefone deve conter apenas dígitos, espaços, hífens e parênteses',
-    };
-  }
-
-  return null;
+  return { valid: true };
 };
 
-export const validateDataNascimento = (dataNascimento?: string): ValidationError | null => {
+/**
+ * Validates a date of birth (must be in the past)
+ */
+export const validateDataNascimento = (
+  dataNascimento?: string
+): { valid: boolean; error?: string } => {
   if (!dataNascimento) {
-    return null; // Optional field
+    return { valid: true }; // Optional field
   }
 
   if (typeof dataNascimento !== 'string') {
-    return { field: 'dataNascimento', message: 'Data de nascimento deve ser uma string' };
+    return { valid: false, error: 'Data de nascimento deve ser uma string' };
+  }
+
+  // Check ISO 8601 format (YYYY-MM-DD)
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dataNascimento)) {
+    return { valid: false, error: 'Data deve estar no formato YYYY-MM-DD' };
   }
 
   const date = new Date(dataNascimento);
+  const now = new Date();
+
   if (isNaN(date.getTime())) {
-    return { field: 'dataNascimento', message: 'Data de nascimento inválida' };
+    return { valid: false, error: 'Data de nascimento inválida' };
   }
 
-  const today = new Date();
-  if (date >= today) {
-    return {
-      field: 'dataNascimento',
-      message: 'Data de nascimento deve ser no passado',
-    };
+  if (date >= now) {
+    return { valid: false, error: 'Data de nascimento deve ser no passado' };
   }
 
-  return null;
+  return { valid: true };
 };
 
-export const validateCreatePessoa = (data: unknown): ValidationError[] => {
+/**
+ * Normalizes email to lowercase
+ */
+export const normalizeEmail = (email: string): string => {
+  return email.trim().toLowerCase();
+};
+
+/**
+ * Normalizes phone number (removes non-digits)
+ */
+export const normalizeTelefone = (telefone?: string): string | undefined => {
+  if (!telefone) return undefined;
+  return telefone.replace(/\D/g, '');
+};
+
+/**
+ * Validates a complete Pessoa creation request
+ */
+export const validateCreatePessoa = (data: unknown): { valid: boolean; errors: ValidationError[] } => {
   const errors: ValidationError[] = [];
 
-  if (typeof data !== 'object' || data === null) {
-    return [{ field: 'root', message: 'Dados inválidos' }];
+  if (!data || typeof data !== 'object') {
+    return { valid: false, errors: [{ field: 'root', message: 'Dados inválidos' }] };
   }
 
   const dto = data as Record<string, unknown>;
 
-  const nomeError = validateNome(dto.nome as string);
-  if (nomeError) errors.push(nomeError);
+  // Validate nome
+  const nomeValidation = validateNome(dto.nome as string);
+  if (!nomeValidation.valid) {
+    errors.push({ field: 'nome', message: nomeValidation.error! });
+  }
 
-  const emailError = validateEmail(dto.email as string);
-  if (emailError) errors.push(emailError);
+  // Validate email
+  const emailValidation = validateEmail(dto.email as string);
+  if (!emailValidation.valid) {
+    errors.push({ field: 'email', message: emailValidation.error! });
+  }
 
-  const telefoneError = validateTelefone(dto.telefone as string | undefined);
-  if (telefoneError) errors.push(telefoneError);
+  // Validate telefone (optional)
+  if (dto.telefone) {
+    const telefoneValidation = validateTelefone(dto.telefone as string);
+    if (!telefoneValidation.valid) {
+      errors.push({ field: 'telefone', message: telefoneValidation.error! });
+    }
+  }
 
-  const dataNascimentoError = validateDataNascimento(dto.dataNascimento as string | undefined);
-  if (dataNascimentoError) errors.push(dataNascimentoError);
+  // Validate dataNascimento (optional)
+  if (dto.dataNascimento) {
+    const dataValidation = validateDataNascimento(dto.dataNascimento as string);
+    if (!dataValidation.valid) {
+      errors.push({ field: 'dataNascimento', message: dataValidation.error! });
+    }
+  }
 
-  return errors;
+  return { valid: errors.length === 0, errors };
 };
 
-export const validateUpdatePessoa = (data: unknown): ValidationError[] => {
+/**
+ * Validates a complete Pessoa update request
+ */
+export const validateUpdatePessoa = (data: unknown): { valid: boolean; errors: ValidationError[] } => {
   const errors: ValidationError[] = [];
 
-  if (typeof data !== 'object' || data === null) {
-    return [{ field: 'root', message: 'Dados inválidos' }];
+  if (!data || typeof data !== 'object') {
+    return { valid: false, errors: [{ field: 'root', message: 'Dados inválidos' }] };
   }
 
   const dto = data as Record<string, unknown>;
 
+  // Validate nome if provided
   if (dto.nome !== undefined) {
-    const nomeError = validateNome(dto.nome as string);
-    if (nomeError) errors.push(nomeError);
+    const nomeValidation = validateNome(dto.nome as string);
+    if (!nomeValidation.valid) {
+      errors.push({ field: 'nome', message: nomeValidation.error! });
+    }
   }
 
+  // Validate email if provided
   if (dto.email !== undefined) {
-    const emailError = validateEmail(dto.email as string);
-    if (emailError) errors.push(emailError);
+    const emailValidation = validateEmail(dto.email as string);
+    if (!emailValidation.valid) {
+      errors.push({ field: 'email', message: emailValidation.error! });
+    }
   }
 
+  // Validate telefone if provided
   if (dto.telefone !== undefined) {
-    const telefoneError = validateTelefone(dto.telefone as string | undefined);
-    if (telefoneError) errors.push(telefoneError);
+    const telefoneValidation = validateTelefone(dto.telefone as string);
+    if (!telefoneValidation.valid) {
+      errors.push({ field: 'telefone', message: telefoneValidation.error! });
+    }
   }
 
+  // Validate dataNascimento if provided
   if (dto.dataNascimento !== undefined) {
-    const dataNascimentoError = validateDataNascimento(dto.dataNascimento as string | undefined);
-    if (dataNascimentoError) errors.push(dataNascimentoError);
+    const dataValidation = validateDataNascimento(dto.dataNascimento as string);
+    if (!dataValidation.valid) {
+      errors.push({ field: 'dataNascimento', message: dataValidation.error! });
+    }
   }
 
-  return errors;
+  return { valid: errors.length === 0, errors };
 };
