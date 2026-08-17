@@ -1,1 +1,79 @@
-'use client';\n\nimport { useState, useEffect } from 'react';\nimport { useRouter } from 'next/navigation';\nimport PessoaForm from '@/components/PessoaForm';\nimport { Pessoa, UpdatePessoaDTO } from '@/lib/types/pessoa';\n\ninterface EditPessoaPageProps {\n  params: { id: string };\n}\n\nexport default function EditPessoaPage({ params }: EditPessoaPageProps) {\n  const router = useRouter();\n  const [pessoa, setPessoa] = useState<Pessoa | null>(null);\n  const [isLoading, setIsLoading] = useState(true);\n  const [isSaving, setIsSaving] = useState(false);\n  const [error, setError] = useState<string | null>(null);\n\n  useEffect(() => {\n    const fetchPessoa = async () => {\n      try {\n        const response = await fetch(`/api/pessoas/${params.id}`);\n        if (!response.ok) {\n          throw new Error('Pessoa não encontrada');\n        }\n        const data = await response.json();\n        setPessoa(data);\n      } catch (err) {\n        setError(err instanceof Error ? err.message : 'Erro ao carregar pessoa');\n      } finally {\n        setIsLoading(false);\n      }\n    };\n\n    fetchPessoa();\n  }, [params.id]);\n\n  const handleSubmit = async (data: UpdatePessoaDTO) => {\n    setIsSaving(true);\n    setError(null);\n\n    try {\n      const response = await fetch(`/api/pessoas/${params.id}`, {\n        method: 'PUT',\n        headers: {\n          'Content-Type': 'application/json',\n        },\n        body: JSON.stringify(data),\n      });\n\n      if (!response.ok) {\n        const errorData = await response.json();\n        if (errorData.details) {\n          throw { details: errorData.details };\n        }\n        throw new Error(errorData.message || 'Erro ao atualizar pessoa');\n      }\n\n      router.push(`/pessoas/${params.id}`);\n    } catch (err: any) {\n      if (err.details) {\n        throw err;\n      }\n      setError(err instanceof Error ? err.message : 'Erro desconhecido');\n    } finally {\n      setIsSaving(false);\n    }\n  };\n\n  if (isLoading) {\n    return <div className=\"text-center py-8\">Carregando...</div>;\n  }\n\n  if (error && !pessoa) {\n    return (\n      <div className=\"p-4 bg-red-100 border border-red-400 text-red-700 rounded\">\n        {error}\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"max-w-2xl mx-auto\">\n      <h1 className=\"text-3xl font-bold mb-6\">Editar Pessoa</h1>\n      {pessoa && (\n        <PessoaForm\n          pessoa={pessoa}\n          onSubmit={handleSubmit}\n          isLoading={isSaving}\n          error={error}\n        />\n      )}\n    </div>\n  );\n}\n"
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Pessoa } from '@/lib/types/pessoa';
+import PessoaForm from '@/components/PessoaForm';
+
+interface EditarPessoaPageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function EditarPessoaPage({ params }: EditarPessoaPageProps) {
+  const [pessoa, setPessoa] = useState<Pessoa | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchPessoa = async () => {
+      try {
+        const response = await fetch(`/api/pessoas/${params.id}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.message || 'Pessoa não encontrada');
+          return;
+        }
+
+        setPessoa(data);
+      } catch (err) {
+        setError('Erro ao carregar pessoa');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPessoa();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <p className="text-center text-gray-600">Carregando...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !pessoa) {
+    return (
+      <main className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <Link href="/pessoas" className="text-blue-600 hover:text-blue-800 mb-4 block">
+            ← Voltar para lista
+          </Link>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-800">{error || 'Pessoa não encontrada'}</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-2xl mx-auto px-4">
+        <div className="mb-8">
+          <Link href={`/pessoas/${pessoa.id}`} className="text-blue-600 hover:text-blue-800">
+            ← Voltar para detalhes
+          </Link>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Editar Pessoa</h1>
+        <PessoaForm pessoa={pessoa} isLoading={loading} />
+      </div>
+    </main>
+  );
+}
