@@ -1,11 +1,18 @@
+/**
+ * API routes for individual Pessoa operations
+ * GET /api/pessoas/:id - Get a single person
+ * PUT /api/pessoas/:id - Update a person
+ * DELETE /api/pessoas/:id - Delete a person
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { pessoasDb } from '@/lib/database/pessoasDb';
+import { db } from '@/lib/database/pessoasDb';
 import { validateUpdatePessoa } from '@/lib/validation/pessoasValidator';
-import { createErrorResponse } from '@/lib/api/response';
+import { UpdatePessoaDTO, ErrorResponse } from '@/lib/types/pessoa';
 
 /**
  * GET /api/pessoas/:id
- * Get a single pessoa by ID
+ * Get a single person by ID
  */
 export async function GET(
   request: NextRequest,
@@ -14,20 +21,28 @@ export async function GET(
   try {
     const { id } = params;
 
-    const pessoa = pessoasDb.read(id);
+    const pessoa = db.read(id);
     if (!pessoa) {
       return NextResponse.json(
-        createErrorResponse(404, 'Pessoa não encontrada'),
+        {
+          status: 404,
+          message: `Pessoa com ID ${id} não encontrada`,
+          timestamp: new Date().toISOString(),
+        } as ErrorResponse,
         { status: 404 }
       );
     }
 
     return NextResponse.json(pessoa, { status: 200 });
   } catch (error) {
-    console.error('Error reading pessoa:', error);
     const message = error instanceof Error ? error.message : 'Erro ao buscar pessoa';
+
     return NextResponse.json(
-      createErrorResponse(500, message),
+      {
+        status: 500,
+        message: message,
+        timestamp: new Date().toISOString(),
+      } as ErrorResponse,
       { status: 500 }
     );
   }
@@ -35,7 +50,7 @@ export async function GET(
 
 /**
  * PUT /api/pessoas/:id
- * Update a pessoa
+ * Update a person (partial update allowed)
  */
 export async function PUT(
   request: NextRequest,
@@ -44,10 +59,15 @@ export async function PUT(
   try {
     const { id } = params;
 
-    // Check if pessoa exists
-    if (!pessoasDb.read(id)) {
+    // Check if person exists
+    const existingPessoa = db.read(id);
+    if (!existingPessoa) {
       return NextResponse.json(
-        createErrorResponse(404, 'Pessoa não encontrada'),
+        {
+          status: 404,
+          message: `Pessoa com ID ${id} não encontrada`,
+          timestamp: new Date().toISOString(),
+        } as ErrorResponse,
         { status: 404 }
       );
     }
@@ -55,31 +75,56 @@ export async function PUT(
     const body = await request.json();
 
     // Validate request body
-    const validation = validateUpdatePessoa(body);
+    const validation = validateUpdatePessoa(body as UpdatePessoaDTO);
     if (!validation.valid) {
       return NextResponse.json(
-        createErrorResponse(400, 'Validação falhou', validation.errors),
+        {
+          status: 400,
+          message: 'Validação falhou',
+          details: validation.errors,
+          timestamp: new Date().toISOString(),
+        } as ErrorResponse,
         { status: 400 }
       );
     }
 
-    // Check for email conflict if email is being updated
-    if (body.email && pessoasDb.emailExists(body.email, id)) {
+    // Update person
+    const pessoa = db.update(id, body as UpdatePessoaDTO);
+
+    return NextResponse.json(pessoa, { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Erro ao atualizar pessoa';
+
+    // Check for duplicate email error
+    if (message.includes('já está registrado')) {
       return NextResponse.json(
-        createErrorResponse(409, 'Email já existe'),
+        {
+          status: 409,
+          message: message,
+          timestamp: new Date().toISOString(),
+        } as ErrorResponse,
         { status: 409 }
       );
     }
 
-    // Update pessoa
-    const pessoa = pessoasDb.update(id, body);
+    // Check for not found error
+    if (message.includes('não encontrada')) {
+      return NextResponse.json(
+        {
+          status: 404,
+          message: message,
+          timestamp: new Date().toISOString(),
+        } as ErrorResponse,
+        { status: 404 }
+      );
+    }
 
-    return NextResponse.json(pessoa, { status: 200 });
-  } catch (error) {
-    console.error('Error updating pessoa:', error);
-    const message = error instanceof Error ? error.message : 'Erro ao atualizar pessoa';
     return NextResponse.json(
-      createErrorResponse(500, message),
+      {
+        status: 500,
+        message: message,
+        timestamp: new Date().toISOString(),
+      } as ErrorResponse,
       { status: 500 }
     );
   }
@@ -87,7 +132,7 @@ export async function PUT(
 
 /**
  * DELETE /api/pessoas/:id
- * Delete a pessoa
+ * Delete a person
  */
 export async function DELETE(
   request: NextRequest,
@@ -96,20 +141,44 @@ export async function DELETE(
   try {
     const { id } = params;
 
-    const deleted = pessoasDb.delete(id);
-    if (!deleted) {
+    // Check if person exists
+    const pessoa = db.read(id);
+    if (!pessoa) {
       return NextResponse.json(
-        createErrorResponse(404, 'Pessoa não encontrada'),
+        {
+          status: 404,
+          message: `Pessoa com ID ${id} não encontrada`,
+          timestamp: new Date().toISOString(),
+        } as ErrorResponse,
         { status: 404 }
       );
     }
 
+    // Delete person
+    db.delete(id);
+
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Error deleting pessoa:', error);
     const message = error instanceof Error ? error.message : 'Erro ao deletar pessoa';
+
+    // Check for not found error
+    if (message.includes('não encontrada')) {
+      return NextResponse.json(
+        {
+          status: 404,
+          message: message,
+          timestamp: new Date().toISOString(),
+        } as ErrorResponse,
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
-      createErrorResponse(500, message),
+      {
+        status: 500,
+        message: message,
+        timestamp: new Date().toISOString(),
+      } as ErrorResponse,
       { status: 500 }
     );
   }
