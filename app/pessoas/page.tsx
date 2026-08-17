@@ -1,1 +1,17 @@
-'use client';\n\nimport { useState } from 'react';\nimport PessoasList from '@/components/PessoasList';\n\nexport default function PessoasPage() {\n  const [successMessage, setSuccessMessage] = useState<string | null>(null);\n\n  const handleDelete = async (id: string) => {\n    const response = await fetch(`/api/pessoas/${id}`, {\n      method: 'DELETE',\n    });\n\n    if (!response.ok) {\n      throw new Error('Erro ao deletar pessoa');\n    }\n\n    setSuccessMessage('Pessoa deletada com sucesso!');\n    setTimeout(() => setSuccessMessage(null), 3000);\n  };\n\n  return (\n    <div className=\"space-y-4\">\n      {successMessage && (\n        <div className=\"p-4 bg-green-100 border border-green-400 text-green-700 rounded\">\n          {successMessage}\n        </div>\n      )}\n      <PessoasList onDelete={handleDelete} />\n    </div>\n  );\n}\n"
+import PessoasList from '@/components/PessoasList';
+
+export const metadata = {
+  title: 'Pessoas - CRUD',
+  description: 'Gerenciar pessoas',
+};
+
+export default function PessoasPage() {
+  return (
+    <main className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Gerenciar Pessoas</h1>
+        <PessoasList />
+      </div>
+    </main>
+  );
+}
