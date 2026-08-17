@@ -1,1 +1,172 @@
-'use client';\n\nimport { useState, useEffect } from 'react';\nimport Link from 'next/link';\nimport { useRouter } from 'next/navigation';\nimport { Pessoa } from '@/lib/types/pessoa';\nimport { formatDateBR, formatTimestampBR } from '@/lib/utils/date';\nimport { formatPhoneBR } from '@/lib/utils/phone';\n\ninterface PessoaDetailPageProps {\n  params: { id: string };\n}\n\nexport default function PessoaDetailPage({ params }: PessoaDetailPageProps) {\n  const router = useRouter();\n  const [pessoa, setPessoa] = useState<Pessoa | null>(null);\n  const [isLoading, setIsLoading] = useState(true);\n  const [error, setError] = useState<string | null>(null);\n  const [deleteConfirm, setDeleteConfirm] = useState(false);\n  const [isDeleting, setIsDeleting] = useState(false);\n\n  useEffect(() => {\n    const fetchPessoa = async () => {\n      try {\n        const response = await fetch(`/api/pessoas/${params.id}`);\n        if (!response.ok) {\n          throw new Error('Pessoa não encontrada');\n        }\n        const data = await response.json();\n        setPessoa(data);\n      } catch (err) {\n        setError(err instanceof Error ? err.message : 'Erro ao carregar pessoa');\n      } finally {\n        setIsLoading(false);\n      }\n    };\n\n    fetchPessoa();\n  }, [params.id]);\n\n  const handleDelete = async () => {\n    setIsDeleting(true);\n    try {\n      const response = await fetch(`/api/pessoas/${params.id}`, {\n        method: 'DELETE',\n      });\n\n      if (!response.ok) {\n        throw new Error('Erro ao deletar pessoa');\n      }\n\n      router.push('/pessoas');\n    } catch (err) {\n      setError(err instanceof Error ? err.message : 'Erro ao deletar pessoa');\n    } finally {\n      setIsDeleting(false);\n    }\n  };\n\n  if (isLoading) {\n    return <div className=\"text-center py-8\">Carregando...</div>;\n  }\n\n  if (error || !pessoa) {\n    return (\n      <div className=\"space-y-4\">\n        <div className=\"p-4 bg-red-100 border border-red-400 text-red-700 rounded\">\n          {error || 'Pessoa não encontrada'}\n        </div>\n        <Link href=\"/pessoas\" className=\"text-blue-600 hover:text-blue-800 underline\">\n          Voltar para lista\n        </Link>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"max-w-2xl mx-auto space-y-6\">\n      <div className=\"flex justify-between items-center\">\n        <h1 className=\"text-3xl font-bold\">{pessoa.nome}</h1>\n        <Link href=\"/pessoas\" className=\"text-blue-600 hover:text-blue-800 underline\">\n          Voltar\n        </Link>\n      </div>\n\n      <div className=\"bg-white p-6 rounded-lg shadow\">\n        <div className=\"space-y-4\">\n          <div>\n            <label className=\"block text-sm font-medium text-gray-700\">Email</label>\n            <p className=\"mt-1 text-lg\">{pessoa.email}</p>\n          </div>\n\n          {pessoa.telefone && (\n            <div>\n              <label className=\"block text-sm font-medium text-gray-700\">Telefone</label>\n              <p className=\"mt-1 text-lg\">{formatPhoneBR(pessoa.telefone)}</p>\n            </div>\n          )}\n\n          {pessoa.dataNascimento && (\n            <div>\n              <label className=\"block text-sm font-medium text-gray-700\">\n                Data de Nascimento\n              </label>\n              <p className=\"mt-1 text-lg\">{formatDateBR(pessoa.dataNascimento)}</p>\n            </div>\n          )}\n\n          <div>\n            <label className=\"block text-sm font-medium text-gray-700\">Criado em</label>\n            <p className=\"mt-1 text-sm text-gray-600\">{formatTimestampBR(pessoa.createdAt)}</p>\n          </div>\n\n          <div>\n            <label className=\"block text-sm font-medium text-gray-700\">Atualizado em</label>\n            <p className=\"mt-1 text-sm text-gray-600\">{formatTimestampBR(pessoa.updatedAt)}</p>\n          </div>\n        </div>\n      </div>\n\n      <div className=\"flex gap-2\">\n        <Link\n          href={`/pessoas/${pessoa.id}/editar`}\n          className=\"px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700\"\n        >\n          Editar\n        </Link>\n        <button\n          onClick={() => setDeleteConfirm(true)}\n          className=\"px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700\"\n        >\n          Deletar\n        </button>\n      </div>\n\n      {deleteConfirm && (\n        <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center\">\n          <div className=\"bg-white p-6 rounded-lg shadow-lg\">\n            <h2 className=\"text-lg font-bold mb-4\">Confirmar Deleção</h2>\n            <p className=\"mb-6\">Tem certeza que deseja deletar esta pessoa?</p>\n            <div className=\"flex gap-2\">\n              <button\n                onClick={handleDelete}\n                disabled={isDeleting}\n                className=\"px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400\"\n              >\n                {isDeleting ? 'Deletando...' : 'Deletar'}\n              </button>\n              <button\n                onClick={() => setDeleteConfirm(false)}\n                disabled={isDeleting}\n                className=\"px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 disabled:bg-gray-200\"\n              >\n                Cancelar\n              </button>\n            </div>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n}\n"
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Pessoa } from '@/lib/types/pessoa';
+import ConfirmDialog from '@/components/ConfirmDialog';
+
+interface PessoaDetailPageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function PessoaDetailPage({ params }: PessoaDetailPageProps) {
+  const router = useRouter();
+  const [pessoa, setPessoa] = useState<Pessoa | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const fetchPessoa = async () => {
+      try {
+        const response = await fetch(`/api/pessoas/${params.id}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.message || 'Pessoa não encontrada');
+          return;
+        }
+
+        setPessoa(data);
+      } catch (err) {
+        setError('Erro ao carregar pessoa');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPessoa();
+  }, [params.id]);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/pessoas/${params.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        setError('Erro ao deletar pessoa');
+        setDeleting(false);
+        return;
+      }
+
+      setDeleteConfirm(false);
+      router.push('/pessoas');
+    } catch (err) {
+      setError('Erro ao deletar pessoa');
+      setDeleting(false);
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const formatPhone = (phone?: string) => {
+    if (!phone) return '-';
+    if (phone.length === 11) {
+      return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
+    }
+    return phone;
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <p className="text-center text-gray-600">Carregando...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !pessoa) {
+    return (
+      <main className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <Link href="/pessoas" className="text-blue-600 hover:text-blue-800 mb-4 block">
+            ← Voltar para lista
+          </Link>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-800">{error || 'Pessoa não encontrada'}</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-2xl mx-auto px-4">
+        <Link href="/pessoas" className="text-blue-600 hover:text-blue-800 mb-4 block">
+          ← Voltar para lista
+        </Link>
+
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">{pessoa.nome}</h1>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Email</label>
+              <p className="mt-1 text-lg text-gray-900">{pessoa.email}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Telefone</label>
+              <p className="mt-1 text-lg text-gray-900">{formatPhone(pessoa.telefone)}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Data de Nascimento</label>
+              <p className="mt-1 text-lg text-gray-900">{formatDate(pessoa.dataNascimento)}</p>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-600">
+                Criado em: {new Date(pessoa.createdAt).toLocaleString('pt-BR')}
+              </p>
+              <p className="text-sm text-gray-600">
+                Atualizado em: {new Date(pessoa.updatedAt).toLocaleString('pt-BR')}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 flex gap-4">
+            <Link
+              href={`/pessoas/${pessoa.id}/editar`}
+              className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+            >
+              Editar
+            </Link>
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Deletar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Confirmar Exclusão"
+          message={`Tem certeza que deseja deletar ${pessoa.nome}? Esta ação não pode ser desfeita.`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirm(false)}
+          isLoading={deleting}
+          confirmText="Deletar"
+          cancelText="Cancelar"
+          isDangerous
+        />
+      )}
+    </main>
+  );
+}
